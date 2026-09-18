@@ -18,6 +18,7 @@
     --ok-fg: #1f9d5c;
     --warn-bg: rgba(230, 160, 25, 0.16);
     --warn-fg: #b3790f;
+    --desc-color: #000000;
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
@@ -38,6 +39,7 @@
       --ok-fg: #4fd390;
       --warn-bg: rgba(230, 160, 25, 0.2);
       --warn-fg: #f0b93e;
+      --desc-color: #f4f5fb;
     }
   }
   :root[data-theme="dark"] {
@@ -58,6 +60,7 @@
     --ok-fg: #4fd390;
     --warn-bg: rgba(230, 160, 25, 0.2);
     --warn-fg: #f0b93e;
+    --desc-color: #f4f5fb;
   }
 
   * { box-sizing: border-box; }
@@ -176,13 +179,13 @@
     text-transform: uppercase;
   }
   .card .title {
-    font-size: 13.5px;
+    font-size: 16px;
     font-weight: 700;
     line-height: 1.3;
   }
   .card .desc {
-    font-size: 11px;
-    color: var(--muted);
+    font-size: 14px;
+    color: var(--desc-color, var(--muted));
     line-height: 1.5;
     display: -webkit-box;
     -webkit-line-clamp: 2;
