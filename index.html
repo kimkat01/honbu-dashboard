@@ -237,6 +237,27 @@
     color: var(--accent);
   }
 
+  /* 承認・目安箱カード：件数を大きく右下に */
+  .card.stat {
+    position: relative;
+  }
+  .card.stat .stat-number {
+    font-size: 44px;
+    font-weight: 800;
+    line-height: 1;
+    margin-top: auto;
+    align-self: flex-end;
+    text-align: right;
+  }
+  .card.stat .stat-number .unit {
+    font-size: 14px;
+    font-weight: 700;
+    margin-left: 4px;
+  }
+  .card.stat .stat-open {
+    align-self: flex-end;
+  }
+
   footer {
     text-align: center;
     font-size: 10.5px;
@@ -340,23 +361,24 @@
       <div class="desc">災害時の安否確認・回答率を園ごとに集計（BCP）</div>
     </a>
 
-    <a class="card" href="https://kimkat01.github.io/shiodome-knowledge/shinsei-shonin.html" target="_blank" rel="noopener">
-      <div class="row-top"><div class="icon">✅</div><span class="cat">承認関係</span></div>
+    <a class="card stat" href="https://kimkat01.github.io/shiodome-knowledge/shinsei-shonin.html" target="_blank" rel="noopener">
+      <div class="row-top"><div class="icon">✅</div><span class="pill warn">未処理あり</span></div>
       <div class="title">決裁承認</div>
-      <div class="desc">稟議書の申請・承認フロー</div>
-    </a>
-
-    <a class="card" href="https://docs.google.com/spreadsheets/d/15g-0UHJZIjz0JIiRPzVI24kT2tDM7MUfqmlwhiz7mq4/edit" target="_blank" rel="noopener">
-      <div class="row-top"><div class="icon">📝</div><span class="pill warn">未処理あり</span></div>
-      <div class="title">採用計画承認</div>
-      <div class="stat-number">3<span class="unit">件</span></div>
+      <div class="stat-number">2<span class="unit">件</span></div>
       <div class="stat-open">シートを開く →</div>
     </a>
 
-    <a class="card" href="https://docs.google.com/spreadsheets/d/1z3wCamSk7Mjm4hFrP_4D5Q9WKmXOJtUmXuFs0GEdeQI/edit" target="_blank" rel="noopener">
-      <div class="row-top"><div class="icon">💬</div><span class="pill ok">確認済み</span></div>
-      <div class="title">目安箱（新着）</div>
+    <a class="card stat" href="https://docs.google.com/spreadsheets/d/15g-0UHJZIjz0JIiRPzVI24kT2tDM7MUfqmlwhiz7mq4/edit" target="_blank" rel="noopener">
+      <div class="row-top"><div class="icon">📝</div><span class="pill warn">未確認あり</span></div>
+      <div class="title">採用計画承認</div>
       <div class="stat-number">2<span class="unit">件</span></div>
+      <div class="stat-open">シートを開く →</div>
+    </a>
+
+    <a class="card stat" href="https://docs.google.com/spreadsheets/d/1z3wCamSk7Mjm4hFrP_4D5Q9WKmXOJtUmXuFs0GEdeQI/edit" target="_blank" rel="noopener">
+      <div class="row-top"><div class="icon">💬</div><span class="pill warn">未対応あり</span></div>
+      <div class="title">目安箱（未対応）</div>
+      <div class="stat-number">5<span class="unit">件</span></div>
       <div class="stat-open">シートを開く →</div>
     </a>
 
