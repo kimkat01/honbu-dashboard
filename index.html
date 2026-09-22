@@ -1,66 +1,53 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>本部ダッシュボード</title>
 <style>
   :root {
+    --bg-a: #0c0f1c;
+    --bg-b: #10142a;
+    --panel: #2c3a4f;
+    --panel-border: rgba(255, 255, 255, 0.06);
+    --panel-hover: #37485f;
+    --ink: #eef0f8;
+    --ink-soft: #b7bcd6;
+    --muted: #7b81a0;
+    --header-a: #0a0c17;
+    --header-b: #151a30;
+    --header-text: #f6f7fb;
+    --accent: #4d7cf0;
+    --shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+    --shadow-hover: 0 10px 28px rgba(0, 0, 0, 0.55);
+    --warn-bg: rgba(240, 160, 40, 0.16);
+    --warn-fg: #f5b94a;
+    --ok-bg: rgba(52, 199, 130, 0.16);
+    --ok-fg: #4fd68f;
+  }
+
+  :root[data-theme="light"] {
+    --bg-a: #eef1f7;
+    --bg-b: #e4e8f2;
+    --panel: #ffffff;
+    --panel-border: rgba(27, 35, 64, 0.08);
+    --panel-hover: #f4f6fb;
     --ink: #1b2340;
     --ink-soft: #4a5178;
     --muted: #6b7280;
-    --bg: #f4f5f9;
-    --surface: #ffffff;
-    --surface-border: rgba(27, 35, 64, 0.08);
-    --accent: #4169e1;
-    --accent-soft: rgba(65, 105, 225, 0.1);
     --header-a: #1b2340;
     --header-b: #2c3760;
     --header-text: #f6f7fb;
-    --shadow: 0 2px 8px rgba(27, 35, 64, 0.07);
-    --shadow-hover: 0 6px 18px rgba(27, 35, 64, 0.14);
-    --ok-bg: rgba(52, 168, 111, 0.14);
+    --accent: #3a63d8;
+    --shadow: 0 2px 8px rgba(27, 35, 64, 0.1);
+    --shadow-hover: 0 10px 24px rgba(27, 35, 64, 0.16);
+    --warn-bg: rgba(230, 160, 25, 0.14);
+    --warn-fg: #a3700b;
+    --ok-bg: rgba(31, 157, 92, 0.14);
     --ok-fg: #1f9d5c;
-    --warn-bg: rgba(230, 160, 25, 0.16);
-    --warn-fg: #b3790f;
-    --desc-color: #000000;
   }
-  @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) {
-      --ink: #eef0f8;
-      --ink-soft: #b7bcd6;
-      --muted: #8b91ad;
-      --bg: #14172a;
-      --surface: #1d2138;
-      --surface-border: rgba(238, 240, 248, 0.08);
-      --accent: #7c93ef;
-      --accent-soft: rgba(124, 147, 239, 0.16);
-      --header-a: #0d0f1e;
-      --header-b: #1a1f38;
-      --header-text: #f6f7fb;
-      --shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-      --shadow-hover: 0 8px 22px rgba(0, 0, 0, 0.45);
-      --ok-bg: rgba(52, 168, 111, 0.18);
-      --ok-fg: #4fd390;
-      --warn-bg: rgba(230, 160, 25, 0.2);
-      --warn-fg: #f0b93e;
-      --desc-color: #f4f5fb;
-    }
-  }
-  :root[data-theme="dark"] {
-    --ink: #eef0f8;
-    --ink-soft: #b7bcd6;
-    --muted: #8b91ad;
-    --bg: #14172a;
-    --surface: #1d2138;
-    --surface-border: rgba(238, 240, 248, 0.08);
-    --accent: #7c93ef;
-    --accent-soft: rgba(124, 147, 239, 0.16);
-    --header-a: #0d0f1e;
-    --header-b: #1a1f38;
-    --header-text: #f6f7fb;
-    --shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-    --shadow-hover: 0 8px 22px rgba(0, 0, 0, 0.45);
-    --ok-bg: rgba(52, 168, 111, 0.18);
-    --ok-fg: #4fd390;
-    --warn-bg: rgba(230, 160, 25, 0.2);
-    --warn-fg: #f0b93e;
-    --desc-color: #f4f5fb;
+  :root[data-theme="light"] body {
+    background: var(--bg-a);
   }
 
   * { box-sizing: border-box; }
@@ -68,7 +55,7 @@
   body {
     margin: 0;
     font-family: "Hiragino Kaku Gothic ProN", "Hiragino Sans", "Yu Gothic", "Meiryo", system-ui, sans-serif;
-    background: var(--bg);
+    background: radial-gradient(1200px 700px at 15% -10%, #1a2142 0%, var(--bg-a) 55%), var(--bg-a);
     color: var(--ink);
     display: flex;
     flex-direction: column;
@@ -77,51 +64,129 @@
   header {
     background: linear-gradient(120deg, var(--header-a), var(--header-b));
     color: var(--header-text);
-    padding: calc(14px + env(safe-area-inset-top, 0px)) 22px 14px;
+    padding: calc(14px + env(safe-area-inset-top, 0px)) 24px 14px;
     display: flex;
-    align-items: baseline;
+    align-items: center;
     gap: 12px;
     flex-wrap: wrap;
     flex-shrink: 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  }
+  header .logo {
+    width: 30px;
+    height: 30px;
+    border-radius: 9px;
+    background: linear-gradient(135deg, #ff7a45, #ffb54d);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    flex-shrink: 0;
+    box-shadow: 0 2px 6px rgba(255, 122, 69, 0.4);
   }
   header h1 {
     margin: 0;
-    font-size: 18px;
+    font-size: 17px;
     letter-spacing: 0.02em;
     font-weight: 700;
   }
   header .tag {
     font-size: 11px;
-    opacity: 0.7;
+    opacity: 0.65;
     letter-spacing: 0.05em;
+    border-left: 1px solid rgba(255,255,255,0.15);
+    padding-left: 12px;
   }
   header .sub {
     margin-left: auto;
-    font-size: 11.5px;
-    opacity: 0.6;
+    font-size: 11px;
+    opacity: 0.55;
     font-variant-numeric: tabular-nums;
   }
+
+  .theme-toggle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 999px;
+    padding: 4px 5px;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .theme-toggle .icon-sun,
+  .theme-toggle .icon-moon {
+    font-size: 11px;
+    line-height: 1;
+    padding: 2px 3px;
+    opacity: 0.5;
+  }
+  .theme-toggle .track {
+    position: relative;
+    width: 34px;
+    height: 18px;
+    background: rgba(255, 255, 255, 0.16);
+    border-radius: 999px;
+    transition: background 0.15s ease;
+  }
+  .theme-toggle .knob {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+    transition: transform 0.15s ease;
+  }
+  :root[data-theme="light"] .theme-toggle .track { background: var(--accent); }
+  :root[data-theme="light"] .theme-toggle .knob { transform: translateX(16px); }
+  :root[data-theme="light"] .theme-toggle .icon-sun { opacity: 1; }
+  :root:not([data-theme="light"]) .theme-toggle .icon-moon { opacity: 1; }
 
   main {
     flex: 1;
     max-width: 1180px;
     width: 100%;
     margin: 0 auto;
-    padding: 16px 18px calc(16px + env(safe-area-inset-bottom, 0px));
+    padding: 22px 22px calc(22px + env(safe-area-inset-bottom, 0px));
     display: flex;
     flex-direction: column;
+    gap: 22px;
   }
+  main.hidden { display: none; }
+
   .example-note {
     font-size: 11px;
     color: var(--muted);
-    margin: 0 0 10px;
+    margin: -8px 0 0;
   }
+
+  .section-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: var(--ink-soft);
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+  .section-label::before {
+    content: "";
+    width: 3px;
+    height: 12px;
+    background: var(--accent);
+    border-radius: 2px;
+  }
+
   .grid {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    gap: 12px;
-    flex: 1;
-    align-content: center;
+    gap: 14px;
   }
   @media (max-width: 860px) {
     .grid { grid-template-columns: repeat(2, 1fr); }
@@ -131,147 +196,115 @@
   }
 
   .card {
-    background: var(--surface);
+    background: var(--panel);
     border-radius: 14px;
-    padding: 14px 15px;
+    padding: 16px 16px 15px;
     text-decoration: none;
     color: var(--ink);
     box-shadow: var(--shadow);
-    border: 1px solid var(--surface-border);
+    border: 1px solid var(--panel-border);
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 10px;
     position: relative;
-    aspect-ratio: 4 / 3;
-    transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease;
+    min-height: 150px;
+    transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease, border-color 0.12s ease;
   }
   .card:hover, .card:focus-visible {
     transform: translateY(-2px);
     box-shadow: var(--shadow-hover);
-    border-color: var(--accent-soft);
+    background: var(--panel-hover);
+    border-color: rgba(255,255,255,0.12);
   }
   .card:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   .card.disabled { cursor: default; pointer-events: none; }
-  .card.static { cursor: default; }
 
-  .card .row-top {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 6px;
-  }
   .card .icon {
-    font-size: 17px;
-    width: 30px;
-    height: 30px;
+    width: 46px;
+    height: 46px;
+    border-radius: 12px;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: var(--accent-soft);
-    border-radius: 9px;
+    font-size: 21px;
     flex-shrink: 0;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.35);
   }
-  .card .cat {
-    font-size: 9.5px;
-    font-weight: 700;
-    letter-spacing: 0.05em;
-    color: var(--muted);
-    text-transform: uppercase;
-  }
+  .icon.c-blue   { background: linear-gradient(135deg, #4d7cf0, #6a9bff); }
+  .icon.c-teal   { background: linear-gradient(135deg, #17b0a3, #35d6c4); }
+  .icon.c-purple { background: linear-gradient(135deg, #8b6ef0, #a98bff); }
+  .icon.c-red    { background: linear-gradient(135deg, #e6534f, #ff7a70); }
+  .icon.c-orange { background: linear-gradient(135deg, #f0a134, #ffbf5c); }
+  .icon.c-pink   { background: linear-gradient(135deg, #ea5a9c, #ff85c0); }
+  .icon.c-indigo { background: linear-gradient(135deg, #5e6ef0, #7f8dff); }
+  .icon.c-gray   { background: linear-gradient(135deg, #5b6377, #79839c); }
+
   .card .title {
-    font-size: 16px;
+    font-size: 15px;
     font-weight: 700;
     line-height: 1.3;
   }
   .card .desc {
-    font-size: 14px;
-    color: var(--desc-color, var(--muted));
-    line-height: 1.5;
+    font-size: 12.5px;
+    color: var(--ink-soft);
+    line-height: 1.55;
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
   }
-  .card .badge {
-    font-size: 9px;
-    padding: 2px 7px;
-    border-radius: 999px;
-    background: var(--accent-soft);
-    color: var(--accent);
-    font-weight: 700;
-    letter-spacing: 0.03em;
-    white-space: nowrap;
-  }
   .card .pill {
+    position: absolute;
+    top: 14px;
+    right: 14px;
     font-size: 9px;
     font-weight: 700;
-    padding: 2px 7px;
+    padding: 3px 8px;
     border-radius: 999px;
     letter-spacing: 0.02em;
     white-space: nowrap;
   }
   .card .pill.ok { background: var(--ok-bg); color: var(--ok-fg); }
   .card .pill.warn { background: var(--warn-bg); color: var(--warn-fg); }
+  .card .pill.muted { background: rgba(0,0,0,0.28); color: var(--ink-soft); }
 
+  .card .stat-row {
+    margin-top: auto;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+  }
   .card .stat-number {
-    font-size: 22px;
+    font-size: 30px;
     font-weight: 800;
     font-variant-numeric: tabular-nums;
     line-height: 1;
-    margin-top: 1px;
   }
   .card .stat-number .unit {
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 600;
-    color: var(--muted);
+    color: var(--ink-soft);
     margin-left: 3px;
   }
-  .card .stat-sub {
-    font-size: 10px;
-    color: var(--muted);
-    margin-top: auto;
-  }
   .card .stat-open {
-    font-size: 10.5px;
+    font-size: 11px;
     font-weight: 700;
     color: var(--accent);
-  }
-
-  /* 承認・目安箱カード：件数を大きく右下に */
-  .card.stat {
-    position: relative;
-  }
-  .card.stat .stat-number {
-    font-size: 44px;
-    font-weight: 800;
-    line-height: 1;
-    margin-top: auto;
-    align-self: flex-end;
-    text-align: right;
-  }
-  .card.stat .stat-number .unit {
-    font-size: 14px;
-    font-weight: 700;
-    margin-left: 4px;
-  }
-  .card.stat .stat-open {
-    align-self: flex-end;
   }
 
   footer {
     text-align: center;
     font-size: 10.5px;
     color: var(--muted);
-    padding: 2px 20px calc(10px + env(safe-area-inset-bottom, 0px));
+    padding: 4px 20px calc(14px + env(safe-area-inset-bottom, 0px));
     flex-shrink: 0;
   }
-  main.hidden { display: none; }
 
   /* --- PW gate --- */
   #pw-gate {
     position: fixed;
     inset: 0;
-    background: rgba(13, 15, 30, 0.6);
+    background: rgba(6, 8, 16, 0.75);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -279,15 +312,15 @@
     padding: 16px;
   }
   #pw-gate .box {
-    background: var(--surface);
+    background: var(--panel);
     color: var(--ink);
     border-radius: 18px;
     padding: 32px 26px;
     width: 100%;
     max-width: 320px;
     text-align: center;
-    box-shadow: 0 16px 48px rgba(0,0,0,0.35);
-    border: 1px solid var(--surface-border);
+    box-shadow: 0 16px 48px rgba(0,0,0,0.5);
+    border: 1px solid var(--panel-border);
   }
   #pw-gate .box h2 { margin: 0 0 6px; font-size: 17px; }
   #pw-gate .box p { margin: 0 0 18px; font-size: 12.5px; color: var(--muted); line-height: 1.6; }
@@ -295,8 +328,8 @@
     width: 100%;
     padding: 11px 13px;
     font-size: 15px;
-    border: 1px solid var(--surface-border);
-    background: var(--bg);
+    border: 1px solid var(--panel-border);
+    background: var(--bg-a);
     color: var(--ink);
     border-radius: 9px;
     margin-bottom: 12px;
@@ -312,9 +345,11 @@
     color: #fff;
     cursor: pointer;
   }
-  #pw-gate button:hover { filter: brightness(1.05); }
-  #pw-gate .err { color: #ef6f6f; font-size: 12px; min-height: 16px; margin-top: 4px; }
+  #pw-gate button:hover { filter: brightness(1.08); }
+  #pw-gate .err { color: #ff8a80; font-size: 12px; min-height: 16px; margin-top: 4px; }
 </style>
+</head>
+<body>
 
 <div id="pw-gate">
   <div class="box">
@@ -327,68 +362,94 @@
 </div>
 
 <header>
+  <div class="logo">🏢</div>
   <h1>本部ダッシュボード</h1>
   <span class="tag">しおどめグループ</span>
   <span class="sub">全8項目・1画面表示</span>
+  <button class="theme-toggle" id="theme-toggle" type="button" aria-label="ダーク/ライト切り替え">
+    <span class="icon-moon">🌙</span>
+    <span class="track"><span class="knob"></span></span>
+    <span class="icon-sun">☀️</span>
+  </button>
 </header>
 
 <main class="hidden" id="main">
-  <div class="example-note">※ データ連携カードの数値は例です。件数はGAS経由で自動取得予定</div>
+  <div class="example-note">※ 決裁承認・採用計画承認・目安箱の件数は例です。件数はGAS経由で自動取得予定</div>
 
-  <div class="grid">
+  <section>
+    <div class="section-label">情報・映像</div>
+    <div class="grid">
 
-    <a class="card" href="https://kimkat01.github.io/shiodome-knowledge/keiei-dashboard.html" target="_blank" rel="noopener">
-      <div class="row-top"><div class="icon">📊</div><span class="cat">経営・収支</span></div>
-      <div class="title">月次収支レポート</div>
-      <div class="desc">14園の収支・公定価格試算を横スライドで確認</div>
-    </a>
+      <a class="card" href="https://kimkat01.github.io/shiodome-knowledge/keiei-dashboard.html" target="_blank" rel="noopener">
+        <div class="icon c-blue">📊</div>
+        <div class="title">月次収支レポート</div>
+        <div class="desc">14園の収支・公定価格試算を横スライドで確認</div>
+      </a>
 
-    <a class="card" href="https://kimkat01.github.io/shiodome-knowledge/aimoniter.html" target="_blank" rel="noopener">
-      <div class="row-top"><div class="icon">🎥</div><span class="cat">園の映像</span></div>
-      <div class="title">AImoniter</div>
-      <div class="desc">NVR映像の遠隔閲覧・AIによる不適切保育の検知</div>
-    </a>
+      <a class="card" href="https://kimkat01.github.io/shiodome-knowledge/aimoniter.html" target="_blank" rel="noopener">
+        <div class="icon c-teal">🎥</div>
+        <div class="title">AImoniter</div>
+        <div class="desc">NVR映像の遠隔閲覧・AIによる不適切保育の検知</div>
+      </a>
 
-    <a class="card" href="https://kimkat01.github.io/shiodome-knowledge/" target="_blank" rel="noopener">
-      <div class="row-top"><div class="icon">📚</div><span class="cat">その他</span></div>
-      <div class="title">ポータルサイト本部用</div>
-      <div class="desc">規約・マニュアル等の共有ライブラリ</div>
-    </a>
+      <a class="card" href="https://kimkat01.github.io/shiodome-knowledge/" target="_blank" rel="noopener">
+        <div class="icon c-purple">📚</div>
+        <div class="title">ポータルサイト本部用</div>
+        <div class="desc">規約・マニュアル等の共有ライブラリ</div>
+      </a>
 
-    <a class="card disabled" href="#" aria-disabled="true">
-      <div class="row-top"><div class="icon">🛡️</div><span class="badge">リンク未設定</span></div>
-      <div class="title">危機管理対応状況</div>
-      <div class="desc">災害時の安否確認・回答率を園ごとに集計（BCP）</div>
-    </a>
+      <a class="card disabled" href="#" aria-disabled="true">
+        <span class="pill muted">リンク未設定</span>
+        <div class="icon c-red">🛡️</div>
+        <div class="title">危機管理対応状況</div>
+        <div class="desc">災害時の安否確認・回答率を園ごとに集計（BCP）</div>
+      </a>
 
-    <a class="card stat" href="https://kimkat01.github.io/shiodome-knowledge/shinsei-shonin.html" target="_blank" rel="noopener">
-      <div class="row-top"><div class="icon">✅</div><span class="pill warn">未処理あり</span></div>
-      <div class="title">決裁承認</div>
-      <div class="stat-number">2<span class="unit">件</span></div>
-      <div class="stat-open">シートを開く →</div>
-    </a>
+    </div>
+  </section>
 
-    <a class="card stat" href="https://docs.google.com/spreadsheets/d/15g-0UHJZIjz0JIiRPzVI24kT2tDM7MUfqmlwhiz7mq4/edit" target="_blank" rel="noopener">
-      <div class="row-top"><div class="icon">📝</div><span class="pill warn">未確認あり</span></div>
-      <div class="title">採用計画承認</div>
-      <div class="stat-number">2<span class="unit">件</span></div>
-      <div class="stat-open">シートを開く →</div>
-    </a>
+  <section>
+    <div class="section-label">申請・管理</div>
+    <div class="grid">
 
-    <a class="card stat" href="https://docs.google.com/spreadsheets/d/1z3wCamSk7Mjm4hFrP_4D5Q9WKmXOJtUmXuFs0GEdeQI/edit" target="_blank" rel="noopener">
-      <div class="row-top"><div class="icon">💬</div><span class="pill warn">未対応あり</span></div>
-      <div class="title">目安箱（未対応）</div>
-      <div class="stat-number">5<span class="unit">件</span></div>
-      <div class="stat-open">シートを開く →</div>
-    </a>
+      <a class="card" href="https://kimkat01.github.io/shiodome-knowledge/shinsei-shonin.html" target="_blank" rel="noopener">
+        <span class="pill warn">未処理あり</span>
+        <div class="icon c-orange">✅</div>
+        <div class="title">決裁承認</div>
+        <div class="stat-row">
+          <div class="stat-number">2<span class="unit">件</span></div>
+          <div class="stat-open">開く →</div>
+        </div>
+      </a>
 
-    <a class="card" href="https://docs.google.com/spreadsheets/d/1KYQJl14dvvWPM02xMzNye5hFFWiFU_uus-MVH3E-LNY/edit?gid=1822187078#gid=1822187078" target="_blank" rel="noopener">
-      <div class="row-top"><div class="icon">🔐</div><span class="cat">その他</span></div>
-      <div class="title">パスワード管理</div>
-      <div class="desc">各種システムのID・パスワード一覧（本部限定）</div>
-    </a>
+      <a class="card" href="https://docs.google.com/spreadsheets/d/15g-0UHJZIjz0JIiRPzVI24kT2tDM7MUfqmlwhiz7mq4/edit" target="_blank" rel="noopener">
+        <span class="pill warn">未確認あり</span>
+        <div class="icon c-pink">📝</div>
+        <div class="title">採用計画承認</div>
+        <div class="stat-row">
+          <div class="stat-number">2<span class="unit">件</span></div>
+          <div class="stat-open">開く →</div>
+        </div>
+      </a>
 
-  </div>
+      <a class="card" href="https://docs.google.com/spreadsheets/d/1z3wCamSk7Mjm4hFrP_4D5Q9WKmXOJtUmXuFs0GEdeQI/edit" target="_blank" rel="noopener">
+        <span class="pill warn">未対応あり</span>
+        <div class="icon c-indigo">💬</div>
+        <div class="title">目安箱</div>
+        <div class="stat-row">
+          <div class="stat-number">5<span class="unit">件</span></div>
+          <div class="stat-open">開く →</div>
+        </div>
+      </a>
+
+      <a class="card" href="https://docs.google.com/spreadsheets/d/1KYQJl14dvvWPM02xMzNye5hFFWiFU_uus-MVH3E-LNY/edit?gid=1822187078#gid=1822187078" target="_blank" rel="noopener">
+        <div class="icon c-gray">🔐</div>
+        <div class="title">パスワード管理</div>
+        <div class="desc">各種システムのID・パスワード一覧（本部限定）</div>
+      </a>
+
+    </div>
+  </section>
 </main>
 
 <footer>しおどめグループ 本部ダッシュボード</footer>
@@ -420,4 +481,31 @@
     try { alreadyOk = sessionStorage.getItem('honbu_pw_ok') === '1'; } catch (e) {}
     if (alreadyOk) unlock();
   })();
+
+  (function () {
+    var root = document.documentElement;
+    var toggle = document.getElementById('theme-toggle');
+
+    function apply(theme) {
+      if (theme === 'light') {
+        root.setAttribute('data-theme', 'light');
+      } else {
+        root.setAttribute('data-theme', 'dark');
+      }
+    }
+
+    var saved = null;
+    try { saved = localStorage.getItem('honbu_theme'); } catch (e) {}
+    apply(saved || 'dark');
+
+    toggle.addEventListener('click', function () {
+      var current = root.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
+      var next = current === 'light' ? 'dark' : 'light';
+      apply(next);
+      try { localStorage.setItem('honbu_theme', next); } catch (e) {}
+    });
+  })();
 </script>
+
+</body>
+</html>
