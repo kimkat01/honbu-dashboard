@@ -380,7 +380,7 @@
     <div class="section-label">情報・映像</div>
     <div class="grid">
 
-      <a class="card" href="https://kimkat01.github.io/shiodome-knowledge/keiei-dashboard.html?src=honbu2026" target="_blank" rel="noopener">
+      <a class="card" href="https://kimkat01.github.io/shiodome-knowledge/keiei-dashboard.html" target="_blank" rel="noopener">
         <div class="icon c-blue">📊</div>
         <div class="title">月次収支レポート</div>
         <div class="desc">14園の収支・公定価格試算を横スライドで確認</div>
@@ -456,6 +456,7 @@
 
 <script>
   (function () {
+    var GATE_ENABLED = false; // パスワードゲートを復活させる時は true に戻す
     var PW = "honbu2026"; // 仮パスワード。必要に応じて変更してください
     var gate = document.getElementById('pw-gate');
     var main = document.getElementById('main');
@@ -466,6 +467,12 @@
       gate.style.display = 'none';
       main.classList.remove('hidden');
     }
+
+    if (!GATE_ENABLED) {
+      unlock();
+      return;
+    }
+
     function checkPw() {
       if (input.value === PW) {
         try { sessionStorage.setItem('honbu_pw_ok', '1'); } catch (e) {}
