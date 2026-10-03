@@ -392,7 +392,7 @@
   <div class="logo">🏢</div>
   <h1>本部ダッシュボード</h1>
   <span class="tag">しおどめグループ</span>
-  <span class="sub">全8項目・1画面表示</span>
+  <span class="sub">全9項目</span>
   <button class="theme-toggle" id="theme-toggle" type="button" aria-label="ダーク/ライト切り替え">
     <span class="icon-moon">🌙</span>
     <span class="track"><span class="knob"></span></span>
@@ -479,6 +479,15 @@
         <div class="icon c-gray">🔐</div>
         <div class="title">パスワード管理</div>
         <div class="desc">各種システムのID・パスワード一覧（本部限定）</div>
+      </a>
+
+      <!-- マスター管理：外部サービスのID・パスワード。中身はこのページに一切持たせず、共有を限定したスプレッドシートへのリンクだけ
+           （将来パスワード管理サービスに移したら、href をそのサービスのURLに差し替えるだけでよい） -->
+      <a class="card" href="https://docs.google.com/spreadsheets/d/1k-F0p9RX7Ez_9X3mWwgW47BcJokZLlQzEOnxhNguULQ/edit" target="_blank" rel="noopener">
+        <span class="pill warn">本部限定</span>
+        <div class="icon c-red">🗝️</div>
+        <div class="title">マスター管理</div>
+        <div class="desc">外部サービスのID・パスワードを一元管理</div>
       </a>
 
     </div>
