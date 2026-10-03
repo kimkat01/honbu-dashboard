@@ -401,7 +401,7 @@
 </header>
 
 <main class="hidden" id="main">
-  <div class="example-note">※ 決裁承認・採用計画承認・目安箱の件数は例です。件数はGAS経由で自動取得予定</div>
+  <div class="example-note" id="countNote">※ 件数は各スプレッドシートの未処理分を自動で数えています（1分ごとに更新）</div>
 
   <section>
     <div class="section-label">情報・映像</div>
@@ -445,32 +445,34 @@
     <div class="section-label">申請・管理</div>
     <div class="grid">
 
-      <a class="card" href="https://kimkat01.github.io/shiodome-knowledge/shinsei-shonin.html" target="_blank" rel="noopener">
-        <span class="pill warn">未処理あり</span>
+      <!-- 件数カード：data-count の項目名で件数APIの結果を表示する（中身は表示しない） -->
+      <a class="card" data-count="kessai" data-pill="未処理あり" href="https://kimkat01.github.io/shiodome-knowledge/shinsei-shonin.html" target="_blank" rel="noopener">
+        <span class="pill muted">確認中</span>
         <div class="icon c-orange">✅</div>
         <div class="title">決裁承認</div>
         <div class="stat-row">
-          <div class="stat-number">2<span class="unit">件</span></div>
+          <div class="stat-number">–<span class="unit">件</span></div>
           <div class="stat-open">開く →</div>
         </div>
       </a>
 
-      <a class="card" href="https://docs.google.com/spreadsheets/d/15g-0UHJZIjz0JIiRPzVI24kT2tDM7MUfqmlwhiz7mq4/edit" target="_blank" rel="noopener">
-        <span class="pill warn">未確認あり</span>
+      <!-- 採用計画承認：新しい「採用申請システム」（①採用前申請＋②応募者決裁） -->
+      <a class="card" data-count="saiyo" data-pill="未確認あり" href="https://docs.google.com/spreadsheets/d/1mNWDy1eQZUEbnJc0R8roaJ3SXcvnw9Ej4xbxXvDjQ4w/edit" target="_blank" rel="noopener">
+        <span class="pill muted">確認中</span>
         <div class="icon c-pink">📝</div>
         <div class="title">採用計画承認</div>
         <div class="stat-row">
-          <div class="stat-number">2<span class="unit">件</span></div>
+          <div class="stat-number">–<span class="unit">件</span></div>
           <div class="stat-open">開く →</div>
         </div>
       </a>
 
-      <a class="card" href="https://docs.google.com/spreadsheets/d/1z3wCamSk7Mjm4hFrP_4D5Q9WKmXOJtUmXuFs0GEdeQI/edit" target="_blank" rel="noopener">
-        <span class="pill warn">未対応あり</span>
+      <a class="card" data-count="goiken" data-pill="未対応あり" href="https://docs.google.com/spreadsheets/d/1z3wCamSk7Mjm4hFrP_4D5Q9WKmXOJtUmXuFs0GEdeQI/edit" target="_blank" rel="noopener">
+        <span class="pill muted">確認中</span>
         <div class="icon c-indigo">💬</div>
-        <div class="title">目安箱</div>
+        <div class="title">ご意見箱</div>
         <div class="stat-row">
-          <div class="stat-number">5<span class="unit">件</span></div>
+          <div class="stat-number">–<span class="unit">件</span></div>
           <div class="stat-open">開く →</div>
         </div>
       </a>
@@ -556,5 +558,49 @@
   })();
 </script>
 
+
+<script>
+/* ============================================================
+   件数の自動取得（2026-10）
+   ・GAS「本部ダッシュボード 件数API」から未処理の件数だけを受け取って表示する
+   ・COUNT_API_URL にウェブアプリの /exec のURLを貼る。空のときは「未接続」と表示
+   ・結果：数値＝件数／null＝その項目は未連携／-1＝シートが読めなかった
+   ============================================================ */
+(function () {
+  var COUNT_API_URL = '';   // ← GASをデプロイしたら /exec のURLをここに貼る
+  var REFRESH_MS = 60000;   // 1分ごとに更新
+
+  var cards = Array.prototype.slice.call(document.querySelectorAll('[data-count]'));
+  function show(card, n) {
+    var pill = card.querySelector('.pill');
+    var num = card.querySelector('.stat-number');
+    var unit = '<span class="unit">件</span>';
+    if (typeof n === 'number' && n >= 0) {
+      num.innerHTML = n + unit;
+      pill.className = 'pill ' + (n > 0 ? 'warn' : 'ok');
+      pill.textContent = n > 0 ? card.getAttribute('data-pill') : 'なし';
+    } else {
+      num.innerHTML = '–' + unit;
+      pill.className = 'pill muted';
+      pill.textContent = (n === null) ? '未連携' : (n === -1 ? '取得エラー' : '未接続');
+    }
+  }
+  function load() {
+    if (!COUNT_API_URL) { cards.forEach(function (c) { show(c, undefined); }); return; }
+    fetch(COUNT_API_URL + (COUNT_API_URL.indexOf('?') < 0 ? '?' : '&') + 't=' + Date.now())
+      .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+      .then(function (res) {
+        var counts = (res && res.ok && res.counts) || {};
+        cards.forEach(function (c) {
+          var key = c.getAttribute('data-count');
+          show(c, Object.prototype.hasOwnProperty.call(counts, key) ? counts[key] : null);
+        });
+      })
+      .catch(function () { cards.forEach(function (c) { show(c, -1); }); });   // 古い件数を出し続けない
+  }
+  load();
+  setInterval(load, REFRESH_MS);
+})();
+</script>
 </body>
 </html>
