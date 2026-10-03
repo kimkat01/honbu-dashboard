@@ -567,7 +567,7 @@
    ・結果：数値＝件数／null＝その項目は未連携／-1＝シートが読めなかった
    ============================================================ */
 (function () {
-  var COUNT_API_URL = '';   // ← GASをデプロイしたら /exec のURLをここに貼る
+  var COUNT_API_URL = 'https://script.google.com/macros/s/AKfycbzJHhK-jajUwamz69kCWfZu6H2-L9Z4_Hos7O5VrQFd_CHVrMH1HT5AvhgzPIBU-Kx4/exec';   // ← GASをデプロイしたら /exec のURLをここに貼る
   var REFRESH_MS = 60000;   // 1分ごとに更新
 
   var cards = Array.prototype.slice.call(document.querySelectorAll('[data-count]'));
