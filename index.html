@@ -237,6 +237,16 @@
   .icon.c-purple { background: linear-gradient(135deg, #8b6ef0, #a98bff); }
   .icon.c-red    { background: linear-gradient(135deg, #e6534f, #ff7a70); }
   .icon.c-orange { background: linear-gradient(135deg, #f0a134, #ffbf5c); }
+  .icon.c-deeporange { background: linear-gradient(135deg, #ec6a1f, #ff8f45); }
+  /* ハンコ風アイコン（決裁承認） */
+  .icon .hanko {
+    width: 32px; height: 32px; border-radius: 50%;
+    border: 2.5px solid #fff; color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-family: "Hiragino Mincho ProN", "Yu Mincho", "MS Mincho", serif;
+    font-size: 18px; font-weight: 800; line-height: 1;
+    transform: rotate(-12deg);
+  }
   .icon.c-pink   { background: linear-gradient(135deg, #ea5a9c, #ff85c0); }
   .icon.c-indigo { background: linear-gradient(135deg, #5e6ef0, #7f8dff); }
   .icon.c-gray   { background: linear-gradient(135deg, #5b6377, #79839c); }
@@ -307,10 +317,10 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-width: 52px;
-    padding: 3px 10px;
+    min-width: 62px;
+    padding: 5px 14px;
     border-radius: 999px;
-    font-size: 12px;
+    font-size: 14px;
     font-weight: 700;
     line-height: 1.4;
     color: #fff;
@@ -474,7 +484,7 @@
            （将来パスワード管理サービスに移したら、href をそのサービスのURLに差し替えるだけでよい） -->
       <a class="card" href="https://docs.google.com/spreadsheets/d/1k-F0p9RX7Ez_9X3mWwgW47BcJokZLlQzEOnxhNguULQ/edit" target="_blank" rel="noopener">
         <span class="pill warn">本部限定</span>
-        <div class="icon c-red">🗝️</div>
+        <div class="icon c-deeporange">🗝️</div>
         <div class="title">マスター管理</div>
         <div class="desc">外部サービスのID・パスワードを一元管理</div>
       </a>
@@ -489,7 +499,7 @@
       <!-- 件数カード：data-count の項目名で件数APIの結果を表示する（中身は表示しない） -->
       <a class="card" data-count="kessai" data-pill="未処理あり" href="https://kimkat01.github.io/shiodome-knowledge/shinsei-shonin.html" target="_blank" rel="noopener">
         <span class="pill muted">確認中</span>
-        <div class="icon c-orange">✅</div>
+        <div class="icon c-orange"><span class="hanko">印</span></div>
         <div class="title">決裁承認</div>
         <div class="stat-row">
           <div class="stat-number">–<span class="unit">件</span></div>
