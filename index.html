@@ -164,6 +164,21 @@
     margin: -8px 0 0;
   }
 
+  /* 園児数マスタの月末アラート（2026-10） */
+  .jidou-alert {
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    background: var(--warn-bg); color: var(--warn-fg);
+    border: 1px solid var(--warn-fg); border-radius: 12px;
+    padding: 12px 16px; font-size: 14px; font-weight: 700;
+  }
+  .jidou-alert[hidden] { display: none; }
+  .jidou-alert .msg { flex: 1 1 260px; min-width: 0; color: var(--ink); }
+  .jidou-alert .msg small { display: block; font-weight: 400; color: var(--ink-soft); margin-top: 2px; }
+  .jidou-alert a {
+    background: var(--warn-fg); color: #fff; text-decoration: none;
+    padding: 8px 14px; border-radius: 8px; font-size: 13px; white-space: nowrap;
+  }
+
   .section-label {
     display: flex;
     align-items: center;
@@ -401,6 +416,11 @@
 </header>
 
 <main class="hidden" id="main">
+  <div class="jidou-alert" id="jidouAlert" role="alert" hidden>
+    <span class="icon" aria-hidden="true">⚠️</span>
+    <span class="msg"><span id="jidouMsg"></span><small>採用申請の「在籍園児数」に使います。コドモンの園児一覧から年齢別の人数を入力してください。</small></span>
+    <a id="jidouLink" href="https://docs.google.com/spreadsheets/d/1mNWDy1eQZUEbnJc0R8roaJ3SXcvnw9Ej4xbxXvDjQ4w/edit" target="_blank" rel="noopener">園児数マスタを開く</a>
+  </div>
   <div class="example-note" id="countNote">※ 件数は各スプレッドシートの未処理分を自動で数えています（1分ごとに更新）</div>
 
   <section>
@@ -591,12 +611,22 @@
       .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
       .then(function (res) {
         var counts = (res && res.ok && res.counts) || {};
+        showJidou(res && res.jidou);
         cards.forEach(function (c) {
           var key = c.getAttribute('data-count');
           show(c, Object.prototype.hasOwnProperty.call(counts, key) ? counts[key] : null);
         });
       })
       .catch(function () { cards.forEach(function (c) { show(c, -1); }); });   // 古い件数を出し続けない
+  }
+  /* 園児数マスタの月末アラート：未入力の園があるときだけ出す */
+  function showJidou(j) {
+    var box = document.getElementById('jidouAlert');
+    if (!j || j.error || !j.show) { box.hidden = true; return; }
+    document.getElementById('jidouMsg').textContent =
+      j.label + 'の園児数を更新してください（未入力 ' + j.missing + '園 ／ ' + j.total + '園）';
+    if (j.url) document.getElementById('jidouLink').href = j.url;
+    box.hidden = false;
   }
   load();
   setInterval(load, REFRESH_MS);
