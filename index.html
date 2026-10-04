@@ -164,20 +164,6 @@
     margin: -8px 0 0;
   }
 
-  /* 園児数マスタの月末アラート（2026-10） */
-  .jidou-alert {
-    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
-    background: var(--warn-bg); color: var(--warn-fg);
-    border: 1px solid var(--warn-fg); border-radius: 12px;
-    padding: 12px 16px; font-size: 14px; font-weight: 700;
-  }
-  .jidou-alert[hidden] { display: none; }
-  .jidou-alert .msg { flex: 1 1 260px; min-width: 0; color: var(--ink); }
-  .jidou-alert .msg small { display: block; font-weight: 400; color: var(--ink-soft); margin-top: 2px; }
-  .jidou-alert a {
-    background: var(--warn-fg); color: #fff; text-decoration: none;
-    padding: 8px 14px; border-radius: 8px; font-size: 13px; white-space: nowrap;
-  }
 
   .section-label {
     display: flex;
@@ -222,7 +208,8 @@
     flex-direction: column;
     gap: 10px;
     position: relative;
-    min-height: 150px;
+    height: 160px;   /* 全カード同じ大きさ（幅はグリッドで揃う） */
+    overflow: hidden;
     transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease, border-color 0.12s ease;
   }
   .card:hover, .card:focus-visible {
@@ -310,23 +297,25 @@
   /* 1枚のカードの中に複数のボタンを置くとき（月次収支レポートの学法／社福） */
   .card.card-split:hover { transform: none; }
   .card .law-btns {
-    margin-top: auto;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    display: flex;
+    gap: 6px;
   }
   .card .law-btn {
-    display: flex;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
-    padding: 8px 6px;
-    border-radius: 9px;
-    font-size: 13px;
+    min-width: 52px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 12px;
     font-weight: 700;
+    line-height: 1.4;
     color: #fff;
     text-decoration: none;
-    letter-spacing: 0.08em;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+    letter-spacing: 0.06em;
     transition: transform 0.12s ease, filter 0.12s ease;
   }
   .card .law-btn:hover { transform: translateY(-1px); filter: brightness(1.1); }
@@ -407,7 +396,7 @@
   <div class="logo">🏢</div>
   <h1>本部ダッシュボード</h1>
   <span class="tag">しおどめグループ</span>
-  <span class="sub">全9項目</span>
+  <span class="sub">全11項目</span>
   <button class="theme-toggle" id="theme-toggle" type="button" aria-label="ダーク/ライト切り替え">
     <span class="icon-moon">🌙</span>
     <span class="track"><span class="knob"></span></span>
@@ -416,11 +405,6 @@
 </header>
 
 <main class="hidden" id="main">
-  <div class="jidou-alert" id="jidouAlert" role="alert" hidden>
-    <span class="icon" aria-hidden="true">⚠️</span>
-    <span class="msg"><span id="jidouMsg"></span><small>採用申請の「在籍園児数」に使います。コドモンの園児一覧から年齢別の人数を入力してください。</small></span>
-    <a id="jidouLink" href="https://docs.google.com/spreadsheets/d/1mNWDy1eQZUEbnJc0R8roaJ3SXcvnw9Ej4xbxXvDjQ4w/edit" target="_blank" rel="noopener">園児数マスタを開く</a>
-  </div>
   <div class="example-note" id="countNote">※ 件数は各スプレッドシートの未処理分を自動で数えています（1分ごとに更新）</div>
 
   <section>
@@ -510,6 +494,21 @@
         <div class="icon c-red">🗝️</div>
         <div class="title">マスター管理</div>
         <div class="desc">外部サービスのID・パスワードを一元管理</div>
+      </a>
+
+      <!-- 園児管理・職員管理：独立した「園児マスタ」「職員マスタ」（cryk0289のみ閲覧可、全17園）へのリンク。中身はこのページに持たせない -->
+      <a class="card" href="https://docs.google.com/spreadsheets/d/10JWzZ-rsuVAX4HqlbCDKdmrJkHSqip-x3Jiz8Uza9c4/edit" target="_blank" rel="noopener">
+        <span class="pill warn">本部限定</span>
+        <div class="icon c-teal">🧒</div>
+        <div class="title">園児管理</div>
+        <div class="desc">全園の在籍園児（園児マスタ）</div>
+      </a>
+
+      <a class="card" href="https://docs.google.com/spreadsheets/d/1pkdRqjpgCaW694ZMlwYlvHCxE4e0pXtP61iGn19xmGI/edit" target="_blank" rel="noopener">
+        <span class="pill warn">本部限定</span>
+        <div class="icon c-blue">👥</div>
+        <div class="title">職員管理</div>
+        <div class="desc">全園の職員（職員マスタ）</div>
       </a>
 
     </div>
@@ -611,22 +610,12 @@
       .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
       .then(function (res) {
         var counts = (res && res.ok && res.counts) || {};
-        showJidou(res && res.jidou);
         cards.forEach(function (c) {
           var key = c.getAttribute('data-count');
           show(c, Object.prototype.hasOwnProperty.call(counts, key) ? counts[key] : null);
         });
       })
       .catch(function () { cards.forEach(function (c) { show(c, -1); }); });   // 古い件数を出し続けない
-  }
-  /* 園児数マスタの月末アラート：未入力の園があるときだけ出す */
-  function showJidou(j) {
-    var box = document.getElementById('jidouAlert');
-    if (!j || j.error || !j.show) { box.hidden = true; return; }
-    document.getElementById('jidouMsg').textContent =
-      j.label + 'の園児数を更新してください（未入力 ' + j.missing + '園 ／ ' + j.total + '園）';
-    if (j.url) document.getElementById('jidouLink').href = j.url;
-    box.hidden = false;
   }
   load();
   setInterval(load, REFRESH_MS);
