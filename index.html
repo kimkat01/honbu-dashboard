@@ -390,6 +390,27 @@
   #pw-gate button:hover { filter: brightness(1.08); }
   #pw-gate .err { color: #ff8a80; font-size: 12px; min-height: 16px; margin-top: 4px; }
 </style>
+<!-- ★ 高速化（2026-10）
+     ・preconnect：リンク先のサーバーへ事前に接続しておき、クリック後の接続待ちを省く
+     ・speculationrules：カードにマウスを乗せた時点で、リンク先（kimkat01.github.io のページ）を
+       裏で先読み・先に表示準備しておく（Chrome・Edge）。対応していないブラウザでは何も起きない -->
+<link rel="preconnect" href="https://docs.google.com">
+<link rel="preconnect" href="https://script.google.com">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<script type="speculationrules">
+{
+  "prerender": [{
+    "where": { "href_matches": "https://kimkat01.github.io/*" },
+    "eagerness": "moderate",
+    "target_hint": "_blank"
+  }],
+  "prefetch": [{
+    "where": { "href_matches": "https://kimkat01.github.io/*" },
+    "eagerness": "moderate"
+  }]
+}
+</script>
 </head>
 <body>
 
