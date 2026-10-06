@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>決裁承認｜本部ダッシュボード</title>
+<style>
+  :root {
+    --bg-a: #0c0f1c;
+    --panel: #2c3a4f;
+    --panel-2: #243245;
+    --panel-border: rgba(255, 255, 255, 0.08);
+    --panel-hover: #37485f;
+    --ink: #eef0f8;
+    --ink-soft: #b7bcd6;
+    --muted: #8a90ae;
+    --header-a: #0a0c17;
+    --header-b: #151a30;
+    --accent: #4d7cf0;
+    --accent-ink: #ffffff;
+    --shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+    --warn-bg: rgba(240, 160, 40, 0.18);  --warn-fg: #f5b94a;
+    --ok-bg: rgba(52, 199, 130, 0.18);    --ok-fg: #4fd68f;
+    --info-bg: rgba(77, 124, 240, 0.2);   --info-fg: #8fb0ff;
+    --back-bg: rgba(186, 120, 255, 0.18); --back-fg: #c9a2ff;
+    --ng-bg: rgba(240, 90, 90, 0.18);     --ng-fg: #ff8f8f;
+    --input-bg: #1c2638;
+    --overlay: rgba(4, 6, 14, 0.72);
+    --font: "Hiragino Kaku Gothic ProN", "Hiragino Sans", "Yu Gothic", "Meiryo", system-ui, sans-serif;
+  }
+  :root[data-theme="light"] {
+    --bg-a: #eef1f7;
+    --panel: #ffffff;
+    --panel-2: #f6f8fc;
+    --panel-border: rgba(27, 35, 64, 0.1);
+    --panel-hover: #f1f4fb;
+    --ink: #1b2340;
+    --ink-soft: #3d4466;
+    --muted: #5f667f;
+    --header-a: #1b2340;
+    --header-b: #2c3760;
+    --accent: #3a63d8;
+    --shadow: 0 2px 8px rgba(27, 35, 64, 0.1);
+    --warn-bg: rgba(230, 160, 25, 0.16);  --warn-fg: #8a5d06;
+    --ok-bg: rgba(31, 157, 92, 0.14);     --ok-fg: #17784a;
+    --info-bg: rgba(58, 99, 216, 0.12);   --info-fg: #2c4fb4;
+    --back-bg: rgba(130, 70, 200, 0.12);  --back-fg: #6a35aa;
+    --ng-bg: rgba(200, 50, 50, 0.12);     --ng-fg: #b02a2a;
+    --input-bg: #ffffff;
+    --overlay: rgba(20, 26, 46, 0.55);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    font-family: var(--font);
+    background: var(--bg-a);
+    color: var(--ink);
+    font-size: 15px;
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+  button, input, textarea { font-family: inherit; font-size: inherit; }
+  .hidden { display: none !important; }
+
+  /* ---- ヘッダー ---- */
+  header {
+    background: linear-gradient(120deg, var(--header-a), var(--header-b));
+    color: #f6f7fb;
+    padding: calc(12px + env(safe-area-inset-top, 0px)) 20px 12px;
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  }
+  .home {
+    color: #f6f7fb; text-decoration: none; font-size: 14px; font-weight: 700;
+    border: 1px solid rgba(255,255,255,.2); border-radius: 999px; padding: 5px 14px;
+  }
+  .home:hover { background: rgba(255,255,255,.08); }
+  header h1 { margin: 0; font-size: 19px; font-weight: 800; letter-spacing: .04em; }
+  .role-badge {
+    font-size: 13px; font-weight: 700; padding: 3px 12px; border-radius: 999px;
+    background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.18);
+  }
+  .hd-right { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+  .hd-btn {
+    background: rgba(255,255,255,.08); color: #f6f7fb; border: 1px solid rgba(255,255,255,.16);
+    border-radius: 999px; padding: 5px 14px; cursor: pointer; font-size: 14px;
+  }
+  .hd-btn:hover { background: rgba(255,255,255,.16); }
+
+  main { max-width: 1080px; margin: 0 auto; padding: 20px 16px 60px; }
+
+  /* ---- 合言葉 ---- */
+  .login {
+    max-width: 420px; margin: 9vh auto 0; background: var(--panel); border: 1px solid var(--panel-border);
+    border-radius: 16px; padding: 28px 26px; box-shadow: var(--shadow);
+  }
+  .login h2 { margin: 0 0 6px; font-size: 20px; }
+  .login p { margin: 0 0 18px; color: var(--ink-soft); font-size: 14px; }
+  .login input { width: 100%; }
+  .login .row { display: flex; gap: 8px; margin-top: 10px; }
+  .login .msg { min-height: 1.4em; color: var(--ng-fg); font-size: 14px; margin-top: 8px; }
+
+  input[type=text], input[type=password], input[type=search], textarea {
+    background: var(--input-bg); color: var(--ink); border: 1px solid var(--panel-border);
+    border-radius: 10px; padding: 10px 12px; font-size: 16px; outline: none;
+  }
+  :root[data-theme="light"] input[type=text], :root[data-theme="light"] input[type=password],
+  :root[data-theme="light"] input[type=search], :root[data-theme="light"] textarea { border-color: #c9cfdf; }
+  input:focus, textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(77,124,240,.25); }
+  .btn {
+    border: none; border-radius: 10px; padding: 10px 18px; font-weight: 800; cursor: pointer;
+    background: var(--accent); color: var(--accent-ink); font-size: 15px;
+  }
+  .btn:disabled { opacity: .5; cursor: default; }
+  .btn.ghost { background: transparent; color: var(--ink); border: 1px solid var(--panel-border); }
+  :root[data-theme="light"] .btn.ghost { border-color: #c9cfdf; }
+
+  /* ---- 一覧 ---- */
+  .summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 18px; }
+  .sum {
+    background: var(--panel); border: 1px solid var(--panel-border); border-radius: 14px;
+    padding: 12px 16px; box-shadow: var(--shadow);
+  }
+  .sum .k { font-size: 13px; color: var(--ink-soft); font-weight: 700; }
+  .sum .v { font-size: 28px; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .sum .v small { font-size: 14px; font-weight: 700; margin-left: 2px; color: var(--ink-soft); }
+  .sum.mine { outline: 2px solid var(--warn-fg); outline-offset: -2px; }
+
+  .toolbar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
+  .tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+  .tab {
+    background: var(--panel); color: var(--ink-soft); border: 1px solid var(--panel-border);
+    border-radius: 999px; padding: 7px 14px; cursor: pointer; font-weight: 700; font-size: 14px;
+  }
+  .tab.on { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .tab .n { margin-left: 4px; font-variant-numeric: tabular-nums; }
+  .toolbar input[type=search] { margin-left: auto; min-width: 220px; font-size: 15px; padding: 8px 12px; }
+
+  .list { display: flex; flex-direction: column; gap: 8px; }
+  .item {
+    display: grid; grid-template-columns: 128px 1fr auto; gap: 4px 16px; align-items: center;
+    background: var(--panel); border: 1px solid var(--panel-border); border-radius: 12px;
+    padding: 12px 16px; cursor: pointer; box-shadow: var(--shadow); text-align: left; color: inherit; width: 100%;
+  }
+  .item:hover { background: var(--panel-hover); }
+  .item .ttl { font-weight: 800; font-size: 16px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .item .meta { color: var(--ink-soft); font-size: 14px; grid-column: 2; }
+  .item .amt { font-weight: 800; font-size: 17px; text-align: right; font-variant-numeric: tabular-nums; grid-row: 1 / span 2; grid-column: 3; }
+  .item .st { grid-row: 1 / span 2; }
+  .item .no { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; display: block; margin-top: 4px; }
+  .badge {
+    display: inline-block; font-size: 13px; font-weight: 800; padding: 3px 10px; border-radius: 999px; white-space: nowrap;
+  }
+  .b-honbu { background: var(--warn-bg); color: var(--warn-fg); }
+  .b-rijicho { background: var(--info-bg); color: var(--info-fg); }
+  .b-done { background: var(--ok-bg); color: var(--ok-fg); }
+  .b-back { background: var(--back-bg); color: var(--back-fg); }
+  .b-reject { background: var(--ng-bg); color: var(--ng-fg); }
+  .empty-msg { text-align: center; color: var(--ink-soft); padding: 40px 0; font-size: 15px; }
+  .loading { text-align: center; color: var(--ink-soft); padding: 40px 0; }
+  .demo-note {
+    background: var(--warn-bg); color: var(--warn-fg); border-radius: 10px; padding: 8px 14px;
+    font-size: 14px; font-weight: 700; margin-bottom: 14px;
+  }
+  .toast {
+    position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 50;
+    background: #1b2340; color: #fff; padding: 12px 20px; border-radius: 12px; font-weight: 700;
+    box-shadow: 0 8px 24px rgba(0,0,0,.35); font-size: 15px;
+  }
+
+  /* ---- 詳細 ---- */
+  .overlay {
+    position: fixed; inset: 0; background: var(--overlay); z-index: 20;
+    display: flex; align-items: stretch; justify-content: center; padding: 16px;
+  }
+  .detail {
+    background: var(--panel-2); border-radius: 16px; width: 100%; max-width: 1240px;
+    display: grid; grid-template-columns: minmax(0, 1fr) 380px; overflow: hidden;
+    border: 1px solid var(--panel-border); box-shadow: 0 20px 60px rgba(0,0,0,.45);
+  }
+  .doc-area { overflow: auto; padding: 18px; display: flex; justify-content: center; align-items: flex-start; background: rgba(0,0,0,.18); }
+  :root[data-theme="light"] .doc-area { background: #e3e7f0; }
+  .side { overflow: auto; padding: 18px 18px 24px; display: flex; flex-direction: column; gap: 16px; border-left: 1px solid var(--panel-border); }
+  .side-top { display: flex; align-items: center; gap: 8px; }
+  .side-top { flex-wrap: wrap; }
+  .side-top .btn { white-space: nowrap; padding: 8px 14px; }
+  #dNo { white-space: nowrap; }
+  .side-top .close { margin-left: auto; }
+  .side h3 { margin: 0 0 8px; font-size: 15px; color: var(--ink-soft); }
+  .box { background: var(--panel); border: 1px solid var(--panel-border); border-radius: 12px; padding: 14px; }
+  .files a { display: block; color: var(--info-fg); font-weight: 700; padding: 6px 0; word-break: break-all; text-decoration: none; }
+  .files a:hover { text-decoration: underline; }
+  .files .none { color: var(--muted); }
+  .hist { list-style: none; margin: 0; padding: 0; }
+  .hist li { padding: 8px 0; border-bottom: 1px dashed var(--panel-border); font-size: 14px; }
+  .hist li:last-child { border-bottom: none; }
+  .hist .when { color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; }
+  .hist .cmt { margin-top: 4px; white-space: pre-wrap; background: var(--panel-2); border-radius: 8px; padding: 6px 10px; }
+  .act label { display: block; font-weight: 700; font-size: 14px; margin: 0 0 4px; }
+  .act input, .act textarea { width: 100%; margin-bottom: 10px; }
+  .act textarea { min-height: 90px; resize: vertical; }
+  .act .hint { font-size: 13px; color: var(--ink-soft); margin: -4px 0 10px; }
+  .act-btns { display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 8px; }
+  .b-approve { background: #d23b3b; }
+  .b-sendback { background: #7b4fc4; }
+  .b-rej { background: #5b6478; }
+  .act-note { font-size: 14px; color: var(--ink-soft); }
+
+  /* ---- A4書類（申請フォームの確認画面と同じ体裁。紙なので常に白） ---- */
+  .doc-scaler { flex: 0 0 auto; }
+  .doc-page {
+    --d-ink: #26303A; --d-soft: #5A6773; --d-line: #D7E0E2; --d-hint: #9AA6AD;
+    --d-primary: #4169E1; --d-primary-dark: #2F4FB8; --d-tint: #EAEFFB; --d-red: #C8352B;
+    width: 794px; height: 1123px; background: #fff; color: var(--d-ink);
+    box-shadow: 0 2px 14px rgba(20,30,40,.25); padding: 40px 46px 30px;
+    display: flex; flex-direction: column; font-size: 13px; line-height: 1.5; transform-origin: top left;
+    font-family: var(--font);
+  }
+  .doc-gen { font-size: 10px; color: var(--d-hint); display: flex; justify-content: space-between; margin-bottom: 2px; }
+  .doc-title { text-align: center; font-size: 26px; font-weight: 800; letter-spacing: .5em; text-indent: .5em; padding: 6px 0 12px; border-bottom: 2.5px solid var(--d-ink); margin-bottom: 12px; }
+  .doc-meta { display: grid; grid-template-columns: 100px 1fr 100px 1fr; border: 1px solid var(--d-ink); margin-bottom: 10px; }
+  .doc-meta > div { border-bottom: 1px solid var(--d-soft); border-right: 1px solid var(--d-soft); padding: 6px 9px; display: flex; align-items: center; }
+  .doc-meta > div:nth-child(4n) { border-right: none; }
+  .doc-meta > div:nth-last-child(-n+2) { border-bottom: none; }
+  .doc-meta .mk { background: var(--d-tint); color: var(--d-primary-dark); font-weight: 700; font-size: 12px; }
+  .doc-meta .mv { font-size: 13px; }
+  .doc-meta .mv.span3 { grid-column: span 3; border-right: none; }
+  .doc-block { border: 1px solid var(--d-soft); margin-bottom: 9px; overflow: hidden; }
+  .doc-block.grow { flex: 1 1 auto; display: flex; flex-direction: column; min-height: 0; }
+  .doc-block .bh { background: var(--d-tint); color: var(--d-primary-dark); font-weight: 800; font-size: 12.5px; padding: 5px 10px; border-bottom: 1px solid var(--d-soft); }
+  .doc-block .bh .bsub { font-weight: 600; color: var(--d-soft); font-size: 11px; margin-left: 6px; }
+  .doc-block .bb { padding: 8px 11px; white-space: pre-wrap; line-height: 1.62; font-size: 12.5px; overflow: hidden; }
+  .doc-block.grow .bb { flex: 1 1 auto; }
+  .doc-block .bb.empty { color: var(--d-hint); font-style: italic; }
+  .doc-vendors { width: 100%; border-collapse: collapse; }
+  .doc-vendors th { background: #F5F7F8; font-size: 11px; color: var(--d-soft); font-weight: 700; padding: 4px 9px; text-align: left; border-bottom: 1px solid var(--d-soft); }
+  .doc-vendors td { padding: 5px 9px; border-bottom: 1px solid var(--d-line); font-size: 12px; line-height: 1.3; }
+  .doc-vendors tr:last-child td { border-bottom: none; }
+  .doc-vendors td.amt { text-align: right; font-variant-numeric: tabular-nums; }
+  .doc-vendors td.adopt { text-align: center; width: 40px; }
+  .doc-vendors tr.adopted td { background: var(--d-tint); font-weight: 700; }
+  .adopt-mark { display: inline-block; width: 18px; height: 18px; line-height: 15px; border-radius: 50%; border: 2px solid var(--d-primary); color: var(--d-primary); font-size: 10.5px; font-weight: 800; text-align: center; }
+  .doc-row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; margin-bottom: 9px; }
+  .doc-amount { display: flex; align-items: center; justify-content: space-between; padding: 7px 11px; }
+  .doc-amount .yen-total { font-size: 17px; font-weight: 800; color: var(--d-primary-dark); }
+  .doc-budget-tag { font-size: 11.5px; font-weight: 700; padding: 3px 10px; border-radius: 999px; background: var(--d-tint); color: var(--d-primary-dark); }
+  .doc-files-line { padding: 7px 11px; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .doc-files-line.empty { color: var(--d-hint); font-style: italic; }
+  .doc-stamps-wrap { margin-top: auto; padding-top: 6px; }
+  .doc-stamps-title { font-size: 12px; font-weight: 800; color: var(--d-soft); margin-bottom: 5px; }
+  .doc-stamps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px; }
+  .stamp-box { border: 1px solid var(--d-soft); text-align: center; display: flex; flex-direction: column; }
+  .stamp-box .sb-label { background: #F5F7F8; font-size: 12px; font-weight: 700; color: var(--d-soft); padding: 5px 4px; border-bottom: 1px solid var(--d-soft); }
+  .stamp-box .sb-seal { flex: 1; min-height: 76px; display: flex; align-items: center; justify-content: center; padding: 6px; }
+  .stamp-box .sb-date { font-size: 11px; color: var(--d-soft); border-top: 1px dashed var(--d-line); padding: 3px; min-height: 22px; }
+  .seal { width: 60px; height: 60px; border-radius: 50%; border: 2.5px solid var(--d-red); color: var(--d-red); display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: 800; transform: rotate(-6deg); line-height: 1.15; }
+  .seal .s1 { font-size: 10px; }
+  .seal .s2 { font-size: 13px; letter-spacing: .02em; max-width: 52px; overflow: hidden; white-space: nowrap; }
+  .seal.gray { border-color: #7b8394; color: #5b6478; border-style: double; border-width: 4px; }
+  .seal-empty { width: 60px; height: 60px; border-radius: 50%; border: 1.5px dashed #B7C4C6; color: var(--d-hint); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; }
+  .doc-footer { font-size: 10px; color: var(--d-hint); text-align: right; margin-top: 6px; }
+
+  @media (max-width: 900px) {
+    .detail { grid-template-columns: 1fr; overflow: auto; }
+    .doc-area, .side { overflow: visible; }
+    .side { border-left: none; border-top: 1px solid var(--panel-border); }
+    .summary { grid-template-columns: repeat(2, 1fr); }
+    .overlay { padding: 0; }
+    .detail { border-radius: 0; }
+  }
+  @media (max-width: 600px) {
+    .item { grid-template-columns: 1fr auto; }
+    .item .st { grid-row: auto; grid-column: 1 / -1; }
+    .item .meta { grid-column: 1; }
+    .item .amt { grid-row: auto; grid-column: 2; }
+    .toolbar input[type=search] { margin-left: 0; width: 100%; }
+  }
+
+  /* 印刷：A4の書類だけを等倍で出す */
+  @media print {
+    @page { size: A4; margin: 0; }
+    body { background: #fff; }
+    header, main, .side { display: none !important; }
+    .overlay { position: static; padding: 0; background: none; display: block; }
+    .detail { display: block; box-shadow: none; border: none; background: none; }
+    .doc-area { padding: 0; background: none; display: block; overflow: visible; }
+    .doc-scaler { width: auto !important; height: auto !important; }
+    .doc-page { transform: none !important; box-shadow: none; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <a class="home" href="./">← 本部ダッシュボード</a>
+  <h1>決裁承認</h1>
+  <span class="role-badge hidden" id="roleBadge"></span>
+  <div class="hd-right">
+    <button class="hd-btn" id="themeBtn" type="button">表示切替</button>
+    <button class="hd-btn hidden" id="logoutBtn" type="button">ログアウト</button>
+  </div>
+</header>
+
+<main>
+  <!-- 合言葉 -->
+  <section class="login hidden" id="loginView">
+    <h2>決裁承認にログイン</h2>
+    <p>法人本部用、または理事長用の合言葉を入力してください。合言葉によって押せる承認欄が決まります。</p>
+    <input type="password" id="keyInput" placeholder="合言葉" autocomplete="current-password">
+    <div class="row"><button class="btn" id="loginBtn" type="button" style="flex:1">ログイン</button></div>
+    <div class="msg" id="loginMsg"></div>
+  </section>
+
+  <!-- 一覧 -->
+  <section class="hidden" id="listView">
+    <div class="demo-note hidden" id="demoNote">デモ表示中です（GASのURLが未設定のため、見本データを表示しています。操作しても保存されません）</div>
+    <div class="summary" id="summary"></div>
+    <div class="toolbar">
+      <div class="tabs" id="tabs"></div>
+      <input type="search" id="search" placeholder="件名・園名・申請Noで検索">
+    </div>
+    <div class="list" id="list"><div class="loading">読み込み中…</div></div>
+  </section>
+</main>
+
+<!-- 詳細 -->
+<div class="overlay hidden" id="overlay">
+  <div class="detail">
+    <div class="doc-area" id="docArea">
+      <div class="doc-scaler" id="docScaler"><div class="doc-page" id="docPage"></div></div>
+    </div>
+    <div class="side">
+      <div class="side-top">
+        <span class="badge" id="dStatus"></span>
+        <span id="dNo" style="color:var(--muted);font-size:14px"></span>
+        <button class="btn ghost close" id="printBtn" type="button">印刷</button>
+        <button class="btn ghost" id="closeBtn" type="button">閉じる</button>
+      </div>
+      <div class="box act" id="actBox"></div>
+      <div class="box">
+        <h3>見積書などの添付</h3>
+        <div class="files" id="dFiles"></div>
+      </div>
+      <div class="box">
+        <h3>経過</h3>
+        <ul class="hist" id="dHist"></ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast hidden" id="toast"></div>
+
+<script>
+/* ======== 設定 ======== */
+// 決裁承認GAS（cryk0289「決裁申請 管理」）のウェブアプリURL。空のときは見本データで動くデモ表示
+var GAS_URL = "";
+
+var ST = { HONBU: '本部確認待ち', RIJICHO: '理事長確認待ち', DONE: '決裁済', BACK: '差戻し', REJECT: '却下' };
+var ROLE_LABEL = { honbu: '法人本部', rijicho: '理事長' };
+var state = { key: '', role: '', items: [], tab: 'mine', q: '', current: null };
+
+/* ======== テーマ（本部ダッシュボードと共通の設定を使う） ======== */
+(function () {
+  var root = document.documentElement;
+  function apply(t) { root.setAttribute('data-theme', t === 'light' ? 'light' : 'dark'); }
+  var saved = null; try { saved = localStorage.getItem('honbu_theme'); } catch (e) {}
+  apply(saved || 'dark');
+  document.getElementById('themeBtn').addEventListener('click', function () {
+    var next = root.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+    apply(next); try { localStorage.setItem('honbu_theme', next); } catch (e) {}
+  });
+})();
+
+/* ======== 通信 ======== */
+function api(body) {
+  if (!GAS_URL) return Promise.resolve(demoApi(body));
+  return fetch(GAS_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },   // GASのCORS回避
+    body: JSON.stringify(body)
+  }).then(function (r) { return r.json(); });
+}
+
+/* ======== ログイン ======== */
+function showLogin(msg) {
+  el('loginView').classList.remove('hidden');
+  el('listView').classList.add('hidden');
+  el('roleBadge').classList.add('hidden');
+  el('logoutBtn').classList.add('hidden');
+  el('loginMsg').textContent = msg || '';
+  setTimeout(function () { el('keyInput').focus(); }, 50);
+}
+function doLogin() {
+  var key = el('keyInput').value.trim();
+  if (!key) { el('loginMsg').textContent = '合言葉を入力してください'; return; }
+  el('loginBtn').disabled = true;
+  api({ action: 'login', key: key }).then(function (res) {
+    el('loginBtn').disabled = false;
+    if (!res.ok) { el('loginMsg').textContent = res.error || 'ログインできませんでした'; return; }
+    state.key = key; state.role = res.role;
+    try { sessionStorage.setItem('kessai_key', key); } catch (e) {}
+    afterLogin();
+  }).catch(function () {
+    el('loginBtn').disabled = false;
+    el('loginMsg').textContent = '通信できませんでした。時間をおいて再度お試しください。';
+  });
+}
+function afterLogin() {
+  el('loginView').classList.add('hidden');
+  el('listView').classList.remove('hidden');
+  el('roleBadge').textContent = ROLE_LABEL[state.role] + 'としてログイン中';
+  el('roleBadge').classList.remove('hidden');
+  el('logoutBtn').classList.remove('hidden');
+  el('demoNote').classList.toggle('hidden', !!GAS_URL);
+  load(true);
+}
+el('loginBtn').addEventListener('click', doLogin);
+el('keyInput').addEventListener('keydown', function (e) { if (e.key === 'Enter') doLogin(); });
+el('logoutBtn').addEventListener('click', function () {
+  try { sessionStorage.removeItem('kessai_key'); } catch (e) {}
+  state.key = ''; state.role = ''; el('keyInput').value = '';
+  showLogin();
+});
+
+/* ======== 一覧 ======== */
+function load(openFromUrl) {
+  return api({ action: 'list', key: state.key }).then(function (res) {
+    if (!res.ok) { showLogin(res.error); return; }
+    state.role = res.role;
+    state.items = res.items || [];
+    renderList();
+    if (openFromUrl) {
+      var no = new URLSearchParams(location.search).get('no');
+      if (no) { var it = find(no); if (it) openDetail(it); }
+    }
+  }).catch(function () {
+    el('list').innerHTML = '<div class="empty-msg">読み込めませんでした。画面を更新してください。</div>';
+  });
+}
+
+function mineStatus() { return state.role === 'rijicho' ? ST.RIJICHO : ST.HONBU; }
+var TABS = [
+  { id: 'mine',  label: function () { return 'あなたの確認待ち'; }, test: function (s) { return s === mineStatus(); } },
+  { id: 'open',  label: function () { return '未処理すべて'; },     test: function (s) { return s === ST.HONBU || s === ST.RIJICHO; } },
+  { id: 'back',  label: function () { return '差戻し中'; },         test: function (s) { return s === ST.BACK; } },
+  { id: 'closed',label: function () { return '完了（決裁済・却下）'; }, test: function (s) { return s === ST.DONE || s === ST.REJECT; } },
+  { id: 'all',   label: function () { return 'すべて'; },           test: function () { return true; } }
+];
+
+function renderList() {
+  var items = state.items;
+  var c = function (s) { return items.filter(function (i) { return i.status === s; }).length; };
+  var mine = mineStatus();
+  el('summary').innerHTML = [
+    [ST.HONBU, c(ST.HONBU)], [ST.RIJICHO, c(ST.RIJICHO)], [ST.BACK, c(ST.BACK)], [ST.DONE, c(ST.DONE)]
+  ].map(function (x) {
+    return '<div class="sum' + (x[0] === mine ? ' mine' : '') + '"><div class="k">' + x[0] + '</div><div class="v">' + x[1] + '<small>件</small></div></div>';
+  }).join('');
+
+  el('tabs').innerHTML = TABS.map(function (t) {
+    var n = items.filter(function (i) { return t.test(i.status); }).length;
+    return '<button type="button" class="tab' + (state.tab === t.id ? ' on' : '') + '" data-tab="' + t.id + '">' + t.label() + '<span class="n">' + n + '</span></button>';
+  }).join('');
+  Array.prototype.forEach.call(el('tabs').querySelectorAll('.tab'), function (b) {
+    b.addEventListener('click', function () { state.tab = b.getAttribute('data-tab'); renderList(); });
+  });
+
+  var tab = TABS.filter(function (t) { return t.id === state.tab; })[0];
+  var q = state.q.toLowerCase();
+  var rows = items.filter(function (i) {
+    if (!tab.test(i.status)) return false;
+    if (!q) return true;
+    return [i.kenmei, i.shozoku, i.kianja, i.appNo].join(' ').toLowerCase().indexOf(q) >= 0;
+  });
+  if (!rows.length) {
+    el('list').innerHTML = '<div class="empty-msg">' + (state.tab === 'mine' ? 'あなたの確認待ちの申請はありません。' : '該当する申請はありません。') + '</div>';
+    return;
+  }
+  el('list').innerHTML = rows.map(function (i) {
+    return '<button type="button" class="item" data-no="' + esc(i.appNo) + '">'
+      + '<div class="st">' + badge(i.status) + '<span class="no">' + esc(i.appNo) + '</span></div>'
+      + '<div class="ttl">' + esc(i.kenmei) + (i.resubmitCount ? '　<span class="badge b-back">再申請' + (i.resubmitCount > 1 ? i.resubmitCount + '回目' : '') + '</span>' : '') + '</div>'
+      + '<div class="amt">¥' + yen(i.kingaku) + '</div>'
+      + '<div class="meta">' + esc(i.shozoku) + '　' + esc(i.kianja) + '　／　受付 ' + esc(fmtDate(i.receivedAt)) + '</div>'
+      + '</button>';
+  }).join('');
+  Array.prototype.forEach.call(el('list').querySelectorAll('.item'), function (b) {
+    b.addEventListener('click', function () { openDetail(find(b.getAttribute('data-no'))); });
+  });
+}
+el('search').addEventListener('input', function () { state.q = this.value.trim(); renderList(); });
+
+function badgeCls(s) {
+  return { '本部確認待ち': 'b-honbu', '理事長確認待ち': 'b-rijicho', '決裁済': 'b-done', '差戻し': 'b-back', '却下': 'b-reject' }[s] || '';
+}
+function badge(s) { return '<span class="badge ' + badgeCls(s) + '">' + esc(s) + '</span>'; }
+function find(no) { return state.items.filter(function (i) { return String(i.appNo) === String(no); })[0]; }
+
+/* ======== 詳細 ======== */
+function openDetail(it) {
+  if (!it) return;
+  state.current = it;
+  el('dStatus').className = 'badge ' + badgeCls(it.status);
+  el('dStatus').textContent = it.status;
+  el('dNo').textContent = it.appNo;
+  el('docPage').innerHTML = docHtml(it);
+  el('dFiles').innerHTML = it.files && it.files.length
+    ? it.files.map(function (f) { return '<a href="' + esc(f.url) + '" target="_blank" rel="noopener">📎 ' + esc(f.name) + '</a>'; }).join('')
+    : '<span class="none">添付ファイルはありません</span>';
+  el('dHist').innerHTML = (it.history || []).slice().reverse().map(function (h) {
+    return '<li><div><b>' + esc(h.role) + '</b>　' + esc(h.name || '') + '　<b>' + esc(h.action) + '</b></div>'
+      + '<div class="when">' + esc(fmtDateTime(h.at)) + '</div>'
+      + (h.comment ? '<div class="cmt">' + esc(h.comment) + '</div>' : '') + '</li>';
+  }).join('');
+  renderAct(it);
+  el('overlay').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+  history.replaceState(null, '', '?no=' + encodeURIComponent(it.appNo));
+  fitDoc();
+}
+function closeDetail() {
+  el('overlay').classList.add('hidden');
+  document.body.style.overflow = '';
+  state.current = null;
+  history.replaceState(null, '', location.pathname);
+}
+el('closeBtn').addEventListener('click', closeDetail);
+el('printBtn').addEventListener('click', function () { window.print(); });
+document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && state.current) closeDetail(); });
+
+function fitDoc() {
+  var area = el('docArea'), page = el('docPage'), scaler = el('docScaler');
+  var W = 794, H = 1123;
+  var wide = window.innerWidth > 900;
+  var availW = area.clientWidth - 36;
+  var availH = wide ? area.clientHeight - 36 : Infinity;
+  var s = Math.min(availW / W, availH / H, 1);
+  page.style.transform = 'scale(' + s + ')';
+  scaler.style.width = (W * s) + 'px';
+  scaler.style.height = (H * s) + 'px';
+}
+window.addEventListener('resize', function () { if (state.current) fitDoc(); });
+
+function renderAct(it) {
+  var box = el('actBox');
+  var canAct = it.status === mineStatus();
+  if (!canAct) {
+    var msg;
+    if (it.status === ST.HONBU) msg = '法人本部の確認待ちです。' + (state.role === 'rijicho' ? '本部が承認すると、理事長の承認欄が押せるようになります。' : '');
+    else if (it.status === ST.RIJICHO) msg = '理事長の確認待ちです。';
+    else if (it.status === ST.BACK) msg = '園長へ差し戻し中です。園長が修正して再申請すると、法人本部の確認待ちに戻ります。';
+    else if (it.status === ST.DONE) msg = '法人本部・理事長の承認がそろい、決裁済みです。';
+    else msg = '却下されました。この申請の手続きは終了しています。';
+    box.innerHTML = '<h3>操作</h3><div class="act-note">' + esc(msg) + '</div>';
+    return;
+  }
+  var savedName = ''; try { savedName = localStorage.getItem('kessai_name_' + state.role) || ''; } catch (e) {}
+  box.innerHTML = '<h3>' + ROLE_LABEL[state.role] + 'の判断</h3>'
+    + '<label for="aName">承認者の氏名</label>'
+    + '<input type="text" id="aName" value="' + esc(savedName) + '" placeholder="例）柴 明彦">'
+    + '<div class="hint">氏名は承認印に入ります（次回から自動で入ります）</div>'
+    + '<label for="aCmt">コメント</label>'
+    + '<textarea id="aCmt" placeholder="差戻し・却下のときは理由を必ず入力してください。承認のときは任意です。"></textarea>'
+    + '<div class="act-btns">'
+    + '<button type="button" class="btn b-approve" data-d="承認">承認する</button>'
+    + '<button type="button" class="btn b-sendback" data-d="差戻し">差戻し</button>'
+    + '<button type="button" class="btn b-rej" data-d="却下">却下</button>'
+    + '</div>';
+  Array.prototype.forEach.call(box.querySelectorAll('[data-d]'), function (b) {
+    b.addEventListener('click', function () { decide(b.getAttribute('data-d')); });
+  });
+}
+
+function decide(d) {
+  var it = state.current;
+  var name = el('aName').value.trim();
+  var cmt = el('aCmt').value.trim();
+  if (!name) { alert('承認者の氏名を入力してください'); el('aName').focus(); return; }
+  if (d !== '承認' && !cmt) { alert(d + 'の理由をコメント欄に入力してください'); el('aCmt').focus(); return; }
+  var next = d === '承認'
+    ? (state.role === 'honbu' ? '理事長の確認待ちに回ります。' : '決裁済みとなり、園長にメールで通知されます。')
+    : (d === '差戻し' ? '園長に修正用リンク付きのメールが届き、修正後に再申請されます。' : 'この申請は終了し、園長にメールで通知されます。');
+  if (!confirm('「' + it.kenmei + '」を【' + d + '】します。\n' + next + '\nよろしいですか？')) return;
+  try { localStorage.setItem('kessai_name_' + state.role, name); } catch (e) {}
+
+  Array.prototype.forEach.call(el('actBox').querySelectorAll('button'), function (b) { b.disabled = true; });
+  api({ action: 'decide', key: state.key, appNo: it.appNo, decision: d, name: name, comment: cmt }).then(function (res) {
+    if (!res.ok) throw new Error(res.error || '保存できませんでした');
+    var idx = state.items.indexOf(it);
+    state.items[idx] = res.item;
+    renderList();
+    openDetail(res.item);
+    toast(d + 'しました');
+  }).catch(function (err) {
+    alert('保存できませんでした：' + err.message);
+    load(false).then(function () { var fresh = find(it.appNo); if (fresh) openDetail(fresh); });
+  });
+}
+
+/* ======== A4書類 ======== */
+function docHtml(p) {
+  var vendorRows = (p.vendors || []).map(function (v, i) {
+    if (!v.name && !v.amt) return '';
+    var adopted = String(p.adopt) === String(i + 1);
+    return '<tr class="' + (adopted ? 'adopted' : '') + '"><td>' + esc(v.name || '（未入力）') + '</td>'
+      + '<td class="amt">' + (v.amt ? '¥ ' + yen(v.amt) : '—') + '</td>'
+      + '<td class="adopt">' + (adopted ? '<span class="adopt-mark">採</span>' : '') + '</td></tr>';
+  }).join('');
+  var filled = (p.vendors || []).filter(function (v) { return v.name || v.amt; }).length;
+  var emptyRows = new Array(Math.max(0, 3 - filled) + 1).join('<tr><td>&nbsp;</td><td></td><td></td></tr>');
+  var files = p.files || [];
+  var filesText = files.length ? '📎 ' + files.map(function (f) { return f.name; }).join('　/　') : '添付ファイルなし';
+
+  return '<div class="doc-gen"><span>申請承認｜しおどめグループ</span><span>申請No. ' + esc(p.appNo) + '</span></div>'
+    + '<div class="doc-title">決裁申請書</div>'
+    + '<div class="doc-meta">'
+    +   '<div class="mk">起案日</div><div class="mv">' + esc(jpDate(p.kian_date)) + '</div>'
+    +   '<div class="mk">起案所属名</div><div class="mv">' + esc(p.shozoku || '—') + '</div>'
+    +   '<div class="mk">起案者名</div><div class="mv span3">' + esc(p.kianja || '') + '　（園長）</div>'
+    + '</div>'
+    + block('件名', p.kenmei, '')
+    + block('件名の説明・詳細理由', p.riyu, '', true)
+    + block('想定される効果', p.kouka, '（記入なし）')
+    + block('①　時期<span class="bsub">購入希望時期・採用時期など</span>', p.jiki, '（記入なし）')
+    + '<div class="doc-block"><div class="bh">②　業者<span class="bsub">相見積もり・採用業者に「採」の印</span></div>'
+    +   '<table class="doc-vendors"><thead><tr><th>業者名</th><th style="text-align:right">見積金額（税込）</th><th style="text-align:center">採用</th></tr></thead>'
+    +   '<tbody>' + vendorRows + emptyRows + '</tbody></table></div>'
+    + '<div class="doc-row2">'
+    +   '<div class="doc-block" style="margin-bottom:0"><div class="bh">③　金額</div>'
+    +     '<div class="doc-amount"><span class="yen-total">¥ ' + yen(p.kingaku) + '</span><span class="doc-budget-tag">' + esc(p.budget || '未選択') + '</span></div></div>'
+    +   '<div class="doc-block" style="margin-bottom:0"><div class="bh">見積書の添付</div>'
+    +     '<div class="doc-files-line' + (files.length ? '' : ' empty') + '">' + esc(filesText) + '</div></div>'
+    + '</div>'
+    + '<div class="doc-stamps-wrap"><div class="doc-stamps-title">決裁欄</div><div class="doc-stamps">'
+    +   stamp('園長（申請）', { decision: '申請', name: p.kianja, at: p.receivedAt })
+    +   stamp('法人本部', p.honbu)
+    +   stamp('理事長', p.rijicho)
+    + '</div><div class="doc-footer">決裁承認システムにより電子的に承認されたものです。</div></div>';
+}
+function block(title, text, emptyText, grow) {
+  var has = !!String(text || '').trim();
+  return '<div class="doc-block' + (grow ? ' grow' : '') + '"><div class="bh">' + title + '</div>'
+    + '<div class="bb' + (has ? '' : ' empty') + '">' + esc(has ? text : (emptyText || '未入力')) + '</div></div>';
+}
+function stamp(label, s) {
+  s = s || {};
+  var seal, date = '';
+  if (s.decision === '承認' || s.decision === '申請') {
+    seal = '<div class="seal"><span class="s1">' + (s.decision === '申請' ? '申請' : '承認') + '</span><span class="s2">' + esc(surname(s.name)) + '</span></div>';
+    date = fmtDate(s.at);
+  } else if (s.decision === '差戻し' || s.decision === '却下') {
+    seal = '<div class="seal gray"><span class="s1">' + esc(s.decision) + '</span><span class="s2">' + esc(surname(s.name)) + '</span></div>';
+    date = fmtDate(s.at);
+  } else {
+    seal = '<div class="seal-empty">未承認</div>';
+  }
+  return '<div class="stamp-box"><div class="sb-label">' + esc(label) + '</div><div class="sb-seal">' + seal + '</div><div class="sb-date">' + esc(date) + '</div></div>';
+}
+
+/* ======== 小道具 ======== */
+function el(id) { return document.getElementById(id); }
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+function yen(v) { var d = String(v == null ? '' : v).replace(/[^\d]/g, ''); return d ? Number(d).toLocaleString('ja-JP') : '0'; }
+function surname(n) { n = String(n || '').trim(); return n.split(/[\s　]+/)[0].slice(0, 4); }
+function parseD(s) { if (!s) return null; var d = new Date(String(s).length <= 10 ? s + 'T00:00:00' : s); return isNaN(d) ? null : d; }
+function fmtDate(s) { var d = parseD(s); return d ? d.getFullYear() + '/' + (d.getMonth() + 1) + '/' + d.getDate() : ''; }
+function fmtDateTime(s) { var d = parseD(s); return d ? fmtDate(s) + ' ' + d.getHours() + ':' + ('0' + d.getMinutes()).slice(-2) : ''; }
+function jpDate(s) { var d = parseD(s); return d ? d.getFullYear() + '年' + (d.getMonth() + 1) + '月' + d.getDate() + '日' : '—'; }
+var toastTimer;
+function toast(msg) {
+  var t = el('toast'); t.textContent = msg; t.classList.remove('hidden');
+  clearTimeout(toastTimer); toastTimer = setTimeout(function () { t.classList.add('hidden'); }, 2600);
+}
+
+/* ======== デモ（GAS_URL未設定時のみ） ======== */
+var DEMO = null;
+function demoData() {
+  if (DEMO) return DEMO;
+  var h = function (role, name, action, at, comment) { return { role: role, name: name, action: action, at: at, comment: comment || '' }; };
+  var none = { decision: '', name: '', at: '', comment: '' };
+  DEMO = [
+    { appNo: 'K-2610-003', status: ST.HONBU, receivedAt: '2026-10-06T09:12:00', kian_date: '2026-10-06', shozoku: 'しおどめ保育園つくば', kianja: '山田 花子', email: 'demo@example.com',
+      kenmei: '業務用エアコンの入替について', riyu: '職員室のエアコンが故障し修理不能のため、新規に購入したい。\n冬季の保育環境を確保するため、早急な対応が必要。', kouka: '職員・園児が適温で過ごせ、体調不良のリスクを低減できる。', jiki: '令和8年11月末までに設置希望',
+      vendors: [{ name: '〇〇電機（株）', amt: '220000' }, { name: '△△空調サービス', amt: '245000' }, { name: '□□電器商会', amt: '268000' }], adopt: '1', kingaku: '220000', budget: '予算内',
+      files: [{ name: '見積書_〇〇電機.pdf', url: '#' }, { name: '見積書_△△空調.pdf', url: '#' }], honbu: none, rijicho: none, resubmitCount: 0,
+      history: [h('園長', '山田 花子', '申請', '2026-10-06T09:12:00')] },
+    { appNo: 'K-2610-002', status: ST.RIJICHO, receivedAt: '2026-10-03T14:40:00', kian_date: '2026-10-03', shozoku: 'しおどめ保育園三郷中央', kianja: '佐藤 一郎', email: 'demo@example.com',
+      kenmei: '園庭遊具（すべり台）の修繕', riyu: '点検で支柱の腐食が見つかったため修繕したい。', kouka: '', jiki: '令和8年10月中',
+      vendors: [{ name: '◇◇遊具', amt: '480000' }, { name: '☆☆造園', amt: '512000' }, { name: '', amt: '' }], adopt: '1', kingaku: '480000', budget: '予算外',
+      files: [], honbu: { decision: '承認', name: '木村 太郎', at: '2026-10-04T10:05:00', comment: '安全面から早期対応が妥当' }, rijicho: none, resubmitCount: 1,
+      history: [h('園長', '佐藤 一郎', '申請', '2026-10-01T11:00:00'), h('法人本部', '木村 太郎', '差戻し', '2026-10-02T09:30:00', '相見積もりを2社以上取ってください'), h('園長', '佐藤 一郎', '再申請', '2026-10-03T14:40:00'), h('法人本部', '木村 太郎', '承認', '2026-10-04T10:05:00', '安全面から早期対応が妥当')] },
+    { appNo: 'K-2609-011', status: ST.DONE, receivedAt: '2026-09-20T10:00:00', kian_date: '2026-09-20', shozoku: 'しおどめ保育園稲城', kianja: '鈴木 和子', email: 'demo@example.com',
+      kenmei: '午睡用コットの追加購入', riyu: '園児数増加に伴いコットが不足しているため。', kouka: '', jiki: '',
+      vendors: [{ name: '◎◎保育用品', amt: '86000' }, { name: '', amt: '' }, { name: '', amt: '' }], adopt: '1', kingaku: '86000', budget: '予算内',
+      files: [], honbu: { decision: '承認', name: '木村 太郎', at: '2026-09-21T09:00:00', comment: '' }, rijicho: { decision: '承認', name: '柴 明彦', at: '2026-09-22T16:20:00', comment: '' }, resubmitCount: 0,
+      history: [h('園長', '鈴木 和子', '申請', '2026-09-20T10:00:00'), h('法人本部', '木村 太郎', '承認', '2026-09-21T09:00:00'), h('理事長', '柴 明彦', '承認', '2026-09-22T16:20:00')] }
+  ];
+  return DEMO;
+}
+function demoApi(b) {
+  var role = b.key === 'rijicho' ? 'rijicho' : (b.key ? 'honbu' : '');
+  if (b.action === 'login' || b.action === 'list') {
+    if (!role) return { ok: false, error: '合言葉が違います' };
+    return b.action === 'login' ? { ok: true, role: role } : { ok: true, role: role, items: JSON.parse(JSON.stringify(demoData())) };
+  }
+  if (b.action === 'decide') {
+    var it = demoData().filter(function (i) { return i.appNo === b.appNo; })[0];
+    var at = new Date().toISOString().slice(0, 19);
+    var rec = { decision: b.decision, name: b.name, at: at, comment: b.comment };
+    if (role === 'honbu') it.honbu = rec; else it.rijicho = rec;
+    it.status = b.decision === '承認' ? (role === 'honbu' ? ST.RIJICHO : ST.DONE) : (b.decision === '差戻し' ? ST.BACK : ST.REJECT);
+    it.history.push({ role: ROLE_LABEL[role], name: b.name, action: b.decision, at: at, comment: b.comment });
+    return { ok: true, item: JSON.parse(JSON.stringify(it)) };
+  }
+  return { ok: false, error: '不明な操作です' };
+}
+
+/* ======== 起動 ======== */
+(function start() {
+  if (!GAS_URL) {
+    el('loginView').querySelector('p').innerHTML += '<br><b>デモ表示：</b>何か入力すると法人本部、「rijicho」と入力すると理事長として入れます。';
+  }
+  var saved = ''; try { saved = sessionStorage.getItem('kessai_key') || ''; } catch (e) {}
+  if (!saved) { showLogin(); return; }
+  api({ action: 'login', key: saved }).then(function (res) {
+    if (!res.ok) { showLogin(); return; }
+    state.key = saved; state.role = res.role; afterLogin();
+  }).catch(function () { showLogin('通信できませんでした。時間をおいて再度お試しください。'); });
+})();
+</script>
+</body>
+</html>

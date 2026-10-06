@@ -519,7 +519,8 @@
     <div class="grid">
 
       <!-- 件数カード：data-count の項目名で件数APIの結果を表示する（中身は表示しない） -->
-      <a class="card" data-count="kessai" data-pill="未処理あり" href="https://kimkat01.github.io/shiodome-knowledge/shinsei-shonin.html" target="_blank" rel="noopener">
+      <!-- 決裁承認：本部・理事長が承認する画面（このリポジトリの kessai-shonin.html）。件数は決裁承認GASから取得 -->
+      <a class="card" data-count="kessai" data-pill="未処理あり" href="kessai-shonin.html">
         <span class="pill muted">確認中</span>
         <div class="icon c-orange"><span class="hanko">印</span></div>
         <div class="title">決裁承認</div>
@@ -634,6 +635,9 @@
 (function () {
   var COUNT_API_URL = 'https://script.google.com/macros/s/AKfycbzJHhK-jajUwamz69kCWfZu6H2-L9Z4_Hos7O5VrQFd_CHVrMH1HT5AvhgzPIBU-Kx4/exec';   // ← GASをデプロイしたら /exec のURLをここに貼る
   var REFRESH_MS = 60000;   // 1分ごとに更新
+  // 決裁承認の件数は、決裁承認GAS（cryk0289「決裁申請 管理」）から直接もらう。
+  // kessai-shonin.html の GAS_URL と同じ /exec のURLを貼る。空のときは件数APIの結果のまま
+  var KESSAI_API_URL = '';
 
   var cards = Array.prototype.slice.call(document.querySelectorAll('[data-count]'));
   function show(card, n) {
@@ -650,18 +654,29 @@
       pill.textContent = (n === null) ? '未連携' : (n === -1 ? '取得エラー' : '未接続');
     }
   }
-  function load() {
-    if (!COUNT_API_URL) { cards.forEach(function (c) { show(c, undefined); }); return; }
-    fetch(COUNT_API_URL + (COUNT_API_URL.indexOf('?') < 0 ? '?' : '&') + 't=' + Date.now())
+  function getCounts(url) {
+    return fetch(url + (url.indexOf('?') < 0 ? '?' : '&') + 't=' + Date.now())
       .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
-      .then(function (res) {
-        var counts = (res && res.ok && res.counts) || {};
-        cards.forEach(function (c) {
-          var key = c.getAttribute('data-count');
-          show(c, Object.prototype.hasOwnProperty.call(counts, key) ? counts[key] : null);
-        });
-      })
-      .catch(function () { cards.forEach(function (c) { show(c, -1); }); });   // 古い件数を出し続けない
+      .then(function (res) { if (!res || !res.ok) throw new Error('NG'); return res.counts || {}; });
+  }
+  function apply(keys, counts) {
+    cards.forEach(function (c) {
+      var key = c.getAttribute('data-count');
+      if (keys && keys.indexOf(key) < 0) return;
+      show(c, counts === undefined ? undefined : counts === -1 ? -1 : (Object.prototype.hasOwnProperty.call(counts, key) ? counts[key] : null));
+    });
+  }
+  function load() {
+    var own = KESSAI_API_URL ? ['kessai'] : [];   // 個別に取る項目
+    var others = cards.map(function (c) { return c.getAttribute('data-count'); })
+                      .filter(function (k) { return own.indexOf(k) < 0; });
+    if (!COUNT_API_URL) apply(others, undefined);
+    else getCounts(COUNT_API_URL).then(function (c) { apply(others, c); })
+                                 .catch(function () { apply(others, -1); });   // 古い件数を出し続けない
+    if (KESSAI_API_URL) {
+      getCounts(KESSAI_API_URL).then(function (c) { apply(['kessai'], c); })
+                               .catch(function () { apply(['kessai'], -1); });
+    }
   }
   load();
   setInterval(load, REFRESH_MS);
