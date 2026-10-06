@@ -637,7 +637,7 @@
   var REFRESH_MS = 60000;   // 1分ごとに更新
   // 決裁承認の件数は、決裁承認GAS（cryk0289「決裁申請 管理」）から直接もらう。
   // kessai-shonin.html の GAS_URL と同じ /exec のURLを貼る。空のときは件数APIの結果のまま
-  var KESSAI_API_URL = '';
+  var KESSAI_API_URL = 'https://script.google.com/macros/s/AKfycbzMv_JWR14C--u-RAGDeNaz-Kfj321QJBwdj7bDzSKDCz7Sa06w0jyXzKkS3gQEZG6I/exec';
 
   var cards = Array.prototype.slice.call(document.querySelectorAll('[data-count]'));
   function show(card, n) {
