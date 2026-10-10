@@ -516,40 +516,6 @@
         <div class="desc">NVR映像の遠隔閲覧・AIによる不適切保育の検知</div>
       </a>
 
-      <!-- カメラ映像：メーカーごとにプルダウンで園を選ぶ。リンク先はページ下のスクリプトの CAMERA_LINKS に設定する -->
-      <div class="card card-split">
-        <div class="icon c-indigo">📹</div>
-        <div class="title">カメラ映像</div>
-        <div class="cam-selects">
-          <select class="cam-select" data-cam="ems2" aria-label="EMS2カメラ：園を選ぶ">
-            <option value="" selected>EMS2</option>
-            <option value="S01">認定こども園 しおどめの森</option>
-            <option value="S02">しおどめ保育園 八潮駅北</option>
-            <option value="S03">しおどめ保育園 京急蒲田駅前</option>
-            <option value="S04">しおどめ保育園 小規模認可</option>
-            <option value="S05">しおどめ保育園 江戸川中央</option>
-            <option value="S06">しおどめ保育園 春日部</option>
-            <option value="S07">しおどめ保育園 越谷</option>
-            <option value="S08">しおどめ保育園 八潮茜町</option>
-            <option value="S09">ふれあいしおどめ保育園（守谷）</option>
-            <option value="S10">しおどめ保育園つくば</option>
-            <option value="S12">しおどめ保育園久喜</option>
-            <option value="S13">しおどめ保育園三郷中央</option>
-            <option value="S14">ふれあいしおどめ保育園八潮</option>
-            <option value="Y01">八潮しおどめ保育園</option>
-            <option value="Y03">しおどめなかよし保育園</option>
-          </select>
-          <select class="cam-select" data-cam="guardstation" aria-label="GuardStationカメラ：園を選ぶ">
-            <option value="" selected>GuardStation</option>
-            <option value="Y02">守谷しおどめ保育園</option>
-          </select>
-          <select class="cam-select" data-cam="panasonic" aria-label="Panasonicカメラ：園を選ぶ">
-            <option value="" selected>Panasonic</option>
-            <option value="S11">しおどめ保育園稲城</option>
-          </select>
-        </div>
-      </div>
-
       <a class="card" href="https://kimkat01.github.io/shiodome-knowledge/?garden=honbu" target="_blank" rel="noopener">
         <div class="icon c-purple">📚</div>
         <div class="title">ポータルサイト本部用</div>
@@ -561,14 +527,6 @@
         <div class="icon c-red">🛡️</div>
         <div class="title">危機管理対応状況</div>
         <div class="desc">災害時の安否確認・回答率を園ごとに集計（BCP）</div>
-      </a>
-
-      <!-- ドメボット視聴者：スプレッドシート「ドメボット記録」（cryk0289）。日時・園名・質問内容が自動で記録される -->
-      <a class="card" href="https://docs.google.com/spreadsheets/d/1BKGoqqT75yIPWGV4cKrhc493ZZxKa51tFPzQchGHOsI/edit" target="_blank" rel="noopener">
-        <span class="pill warn">本部限定</span>
-        <div class="icon c-gray">🤖</div>
-        <div class="title">ドメボット視聴者</div>
-        <div class="desc">ドメボットへの質問記録（日時・園名・質問内容）</div>
       </a>
 
     </div>
@@ -658,6 +616,54 @@
         <div class="icon c-green">📰</div>
         <div class="title">News&amp;Topics記事</div>
         <div class="desc">職員ダッシュボードのNews &amp; Topicsを作成・編集</div>
+      </a>
+
+    </div>
+  </section>
+  <section>
+    <div class="section-label">映像・記録</div>
+    <div class="grid">
+
+      <!-- カメラ映像：メーカーごとにプルダウンで園を選ぶ。リンク先はページ下のスクリプトの CAMERA_LINKS に設定する -->
+      <div class="card card-split">
+        <div class="icon c-indigo">📹</div>
+        <div class="title">カメラ映像</div>
+        <div class="cam-selects">
+          <select class="cam-select" data-cam="ems2" aria-label="EMS2カメラ：園を選ぶ">
+            <option value="" selected>EMS2</option>
+            <option value="S01">認定こども園 しおどめの森</option>
+            <option value="S02">しおどめ保育園 八潮駅北</option>
+            <option value="S03">しおどめ保育園 京急蒲田駅前</option>
+            <option value="S04">しおどめ保育園 小規模認可</option>
+            <option value="S05">しおどめ保育園 江戸川中央</option>
+            <option value="S06">しおどめ保育園 春日部</option>
+            <option value="S07">しおどめ保育園 越谷</option>
+            <option value="S08">しおどめ保育園 八潮茜町</option>
+            <option value="S09">ふれあいしおどめ保育園（守谷）</option>
+            <option value="S10">しおどめ保育園つくば</option>
+            <option value="S12">しおどめ保育園久喜</option>
+            <option value="S13">しおどめ保育園三郷中央</option>
+            <option value="S14">ふれあいしおどめ保育園八潮</option>
+            <option value="Y01">八潮しおどめ保育園</option>
+            <option value="Y03">しおどめなかよし保育園</option>
+          </select>
+          <select class="cam-select" data-cam="guardstation" aria-label="GuardStationカメラ：園を選ぶ">
+            <option value="" selected>GuardStation</option>
+            <option value="Y02">守谷しおどめ保育園</option>
+          </select>
+          <select class="cam-select" data-cam="panasonic" aria-label="Panasonicカメラ：園を選ぶ">
+            <option value="" selected>Panasonic</option>
+            <option value="S11">しおどめ保育園稲城</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- ドメボット視聴者：スプレッドシート「ドメボット記録」（cryk0289）。日時・園名・質問内容が自動で記録される -->
+      <a class="card" href="https://docs.google.com/spreadsheets/d/1BKGoqqT75yIPWGV4cKrhc493ZZxKa51tFPzQchGHOsI/edit" target="_blank" rel="noopener">
+        <span class="pill warn">本部限定</span>
+        <div class="icon c-gray">🤖</div>
+        <div class="title">ドメボット視聴者</div>
+        <div class="desc">ドメボットへの質問記録（日時・園名・質問内容）</div>
       </a>
 
     </div>
