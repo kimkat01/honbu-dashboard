@@ -785,7 +785,7 @@ const CAMERA_LINKS = {
     S01: "", S02: "", S03: "", S04: "", S05: "", S06: "", S07: "",
     S08: "", S09: "", S10: "", S12: "", S13: "", S14: "", Y01: "", Y03: ""
   },
-  guardstation: { Y02: "" },
+  guardstation: { Y02: "shiodome-guardstation:open" },   // 理事長PCに「GuardStation起動設定.reg」を登録済みのPCでのみ起動
   panasonic: { S11: "" }
 };
 const CAMERA_NAMES = { ems2: "EMS2カメラ", guardstation: "GuardStationカメラ", panasonic: "Panasonicカメラ" };
@@ -798,7 +798,11 @@ document.querySelectorAll('.cam-select').forEach(function (sel) {
     const url = (CAMERA_LINKS[cam] || {})[code];
     sel.selectedIndex = 0;   // 表示をボタン名に戻す
     if (url) {
-      window.open(url, '_blank', 'noopener');
+      if (/^https?:/i.test(url)) {
+        window.open(url, '_blank', 'noopener');   // Webの画面は別タブで開く
+      } else {
+        window.location.href = url;               // PCのソフト（起動設定を登録したPCのみ）
+      }
     } else {
       alert(CAMERA_NAMES[cam] + '（' + name + '）のリンクは準備中です');
     }
