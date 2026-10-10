@@ -156,7 +156,7 @@
     padding: 22px 22px calc(22px + env(safe-area-inset-bottom, 0px));
     display: flex;
     flex-direction: column;
-    gap: 22px;
+    gap: 14px;   /* 行の見出しをなくしたので、行の間隔をカードの間隔とそろえる */
   }
   main.hidden { display: none; }
 
@@ -495,7 +495,6 @@
   <div class="example-note" id="countNote">※ 件数は各スプレッドシートの未処理分を自動で数えています（1分ごとに更新）</div>
 
   <section>
-    <div class="section-label">情報・映像</div>
     <div class="grid">
 
       <!-- 月次収支レポート：法人ごとにボタンで開く（学法＝柴学園14園／社福＝雄雅会3園）
@@ -533,7 +532,6 @@
   </section>
 
   <section>
-    <div class="section-label">管理</div>
     <div class="grid">
 
       <!-- 園児管理・職員管理：独立した「園児マスタ」「職員マスタ」（cryk0289のみ閲覧可、全17園）へのリンク。中身はこのページに持たせない -->
@@ -570,7 +568,6 @@
   </section>
 
   <section>
-    <div class="section-label">申請・承認</div>
     <div class="grid">
 
       <!-- 件数カード：data-count の項目名で件数APIの結果を表示する（中身は表示しない） -->
@@ -621,7 +618,6 @@
     </div>
   </section>
   <section>
-    <div class="section-label">映像・記録</div>
     <div class="grid">
 
       <!-- カメラ映像：メーカーごとにプルダウンで園を選ぶ。リンク先はページ下のスクリプトの CAMERA_LINKS に設定する -->
