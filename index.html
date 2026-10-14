@@ -521,11 +521,13 @@
         <div class="desc">規約・マニュアル等の共有ライブラリ</div>
       </a>
 
-      <a class="card disabled" href="#" aria-disabled="true">
-        <span class="pill muted">リンク未設定</span>
-        <div class="icon c-red">🛡️</div>
-        <div class="title">危機管理対応状況</div>
-        <div class="desc">災害時の安否確認・回答率を園ごとに集計（BCP）</div>
+      <!-- 園長とのチャット（2026-10）：園⇔本部の1対1。押すとチャット画面が開く（中身は shiodome-knowledge の chat-widget.js）
+           右上の小ラベルに未読の数を出す。GAS未設定のあいだは「準備中」 -->
+      <a class="card" id="chatCard" href="#" role="button">
+        <span class="pill muted" id="chatPill">準備中</span>
+        <div class="icon c-blue">💬</div>
+        <div class="title">園長とのチャット</div>
+        <div class="desc">各園の園長・事務と本部の1対1のやりとり</div>
       </a>
 
     </div>
@@ -660,6 +662,13 @@
         <div class="icon c-gray">🤖</div>
         <div class="title">ドメボット視聴者</div>
         <div class="desc">ドメボットへの質問記録（日時・園名・質問内容）</div>
+      </a>
+
+      <a class="card disabled" href="#" aria-disabled="true">
+        <span class="pill muted">リンク未設定</span>
+        <div class="icon c-red">🛡️</div>
+        <div class="title">危機管理対応状況</div>
+        <div class="desc">災害時の安否確認・回答率を園ごとに集計（BCP）</div>
       </a>
 
     </div>
@@ -820,17 +829,31 @@ document.querySelectorAll('.cam-select').forEach(function (sel) {
 });
 </script>
 <!-- ===== 園長とのチャット（2026-10）：中身は kimkat01/shiodome-knowledge の chat-widget.js（園長ダッシュボードと共通）
-     右下の💬で開く。全園の「園 ⇔ 本部」の部屋を一覧から選ぶ。未読は赤い数字で表示 ===== -->
+     「園長とのチャット」カードで開く。全園の「園 ⇔ 本部」の部屋を一覧から選ぶ。未読は赤い数字で表示 ===== -->
 <script src="https://kimkat01.github.io/staff-dashboard/gardens.js"></script>
 <script src="https://kimkat01.github.io/shiodome-knowledge/chat-widget.js"></script>
 <script>
-  if (window.ShiodomeChat && ShiodomeChat.enabled) {
+  (function () {
+    var card = document.getElementById('chatCard');
+    var pill = document.getElementById('chatPill');
+    card.addEventListener('click', function (e) {
+      e.preventDefault();
+      if (window.ShiodomeChat && ShiodomeChat.enabled) ShiodomeChat.open();
+      else alert('園長とのチャットは準備中です');
+    });
+    if (!(window.ShiodomeChat && ShiodomeChat.enabled)) return;
+    pill.textContent = '確認中';
     ShiodomeChat.init({
       side: 'honbu',
       user: function () { return { loginId: 'honbu', name: '' }; },
-      accent: '#3a63d8'
+      accent: '#3a63d8',
+      showFab: false,   // 右下の💬ボタンは出さず、このカードから開く
+      onUnread: function (n) {
+        pill.className = 'pill ' + (n > 0 ? 'warn' : 'ok');
+        pill.textContent = n > 0 ? '未読 ' + n + '件' : '未読なし';
+      }
     });
-  }
+  })();
 </script>
 </body>
 </html>
