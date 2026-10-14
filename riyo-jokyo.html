@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>利用状況｜本部ダッシュボード</title>
+<!--
+  利用状況（アクセスログ）2026-10
+  ・置き場所：kimkat01/honbu-dashboard リポジトリの一番上（riyo-jokyo.html）
+  ・園長ダッシュボード／職員ダッシュボードで「誰が・いつ・どのツールを開いたか」を一覧で見る画面
+  ・データは GAS「アクセスログ」（cryk0289、スプレッドシート「アクセスログ」に紐付き）から読む
+  ・職員名簿（開いていない人の判定）は、GASが「PINマスタ_テンプレート」のログインマスタから渡す
+-->
+<script>
+  // 本部ダッシュボードと同じテーマ（ダーク／ライト）で開く
+  (function(){ var t = 'dark'; try{ t = localStorage.getItem('honbu_theme') || 'dark'; }catch(e){} document.documentElement.setAttribute('data-theme', t); })();
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+:root{
+  --bg:#f4f6fb; --panel:#ffffff; --fg:#000000; --muted:#4a5266; --line:#dde2ee;
+  --accent:#3a63d8; --accent-soft:#e6ecfc; --accent-ink:#ffffff;
+  --heat0:#f4f6fb; --heat1:#dfe7fb; --heat2:#b9cbf5; --heat3:#7f9eec; --heat4:#3a63d8;
+  --warn:#a3570b; --warn-soft:#fdf1e3; --err:#b42318;
+  --font-body:"BIZ UDPGothic","Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,sans-serif;
+  --font-num:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+}
+:root[data-theme="dark"]{
+  --bg:#0c0f1c; --panel:#1b2233; --fg:#eef0f8; --muted:#a3abc0; --line:#2c3446;
+  --accent:#6f93f5; --accent-soft:#232c48; --accent-ink:#0d1220;
+  --heat0:#141a28; --heat1:#1f2a4a; --heat2:#2b3d72; --heat3:#4560b4; --heat4:#6f93f5;
+  --warn:#f0a35c; --warn-soft:#3a2a18; --err:#ff8a80; color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--font-body);font-size:15px;line-height:1.6;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  padding-top:env(safe-area-inset-top,0px);padding-bottom:calc(40px + env(safe-area-inset-bottom,0px))}
+.wrap{max-width:1200px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+header.top{display:flex;flex-wrap:wrap;align-items:center;gap:12px;padding-top:20px}
+header.top h1{font-size:24px;margin:0}
+.asof{margin-left:auto;color:var(--muted);font-size:13px;display:flex;align-items:center;gap:10px}
+.btn{font:inherit;font-size:14px;border:1px solid var(--line);background:var(--panel);color:var(--fg);border-radius:6px;padding:6px 14px;cursor:pointer;min-height:36px}
+.btn:hover{border-color:var(--accent)}
+.num{font-family:var(--font-num);font-variant-numeric:tabular-nums}
+
+.filters{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end}
+.field{display:flex;flex-direction:column;gap:4px;min-width:0}
+.field label,.field .lbl{font-size:12px;color:var(--muted);letter-spacing:.04em}
+select,input[type=search]{font:inherit;font-size:15px;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:6px 10px;min-height:38px;max-width:100%}
+input[type=search]{width:200px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.seg button{font:inherit;font-size:14px;border:0;background:var(--bg);color:var(--fg);padding:7px 14px;cursor:pointer;min-height:38px}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-pressed=true]{background:var(--accent);color:var(--accent-ink);font-weight:700}
+.reset{font:inherit;font-size:13px;background:none;border:0;color:var(--muted);text-decoration:underline;cursor:pointer;padding:6px}
+button:focus-visible,select:focus-visible,input:focus-visible,td.cell:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.stat .k{font-size:12px;color:var(--muted);letter-spacing:.04em}
+.stat .v{font-size:28px;font-weight:700;line-height:1.2}
+.stat .v.txt{font-size:20px}
+.stat .s{font-size:13px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media (max-width:760px){.stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+.grid2{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:18px;align-items:start}
+@media (max-width:980px){.grid2{grid-template-columns:minmax(0,1fr)}}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;min-width:0;display:flex;flex-direction:column;gap:10px}
+.panel h2{font-size:17px;margin:0}
+.hint{font-size:13px;color:var(--muted);margin:0}
+.scroll{overflow-x:auto}
+
+table{border-collapse:collapse;width:100%}
+.matrix th,.matrix td{font-size:13px;padding:5px 6px;text-align:center;white-space:nowrap}
+.matrix thead th{color:var(--muted);font-weight:700;border-bottom:1px solid var(--line)}
+.matrix tbody th{text-align:left;font-weight:400}
+.matrix tr.grp th{font-size:12px;color:var(--accent);font-weight:700;letter-spacing:.06em;padding-top:12px;text-align:left}
+td.cell{cursor:pointer;border-radius:4px;min-width:44px}
+td.cell.zero{color:var(--muted)}
+td.cell.sel{outline:2px solid var(--fg);outline-offset:-2px}
+td.tot{font-weight:700}
+
+.notyet{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;max-height:560px;overflow:auto}
+.notyet li{display:flex;justify-content:space-between;gap:10px;padding:7px 2px;border-bottom:1px solid var(--line);font-size:14px}
+.notyet .who{min-width:0}
+.notyet .who small{display:block;color:var(--muted);font-size:12px}
+.notyet .last{color:var(--warn);font-size:13px;white-space:nowrap;text-align:right}
+.notyet .last.never{font-weight:700}
+.empty{color:var(--muted);font-size:14px;padding:10px 0}
+
+.log th,.log td{font-size:14px;padding:8px 10px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
+.log thead th{font-size:12px;color:var(--muted);letter-spacing:.04em;background:var(--panel)}
+.log tbody tr:hover{background:var(--accent-soft)}
+.tag{font-size:12px;border-radius:4px;padding:1px 7px;border:1px solid var(--line);color:var(--muted)}
+.tag.encho{border-color:var(--accent);color:var(--accent)}
+.role{font-size:12px;color:var(--muted)}
+.namebtn{font:inherit;font-size:14px;background:none;border:0;padding:0;color:var(--fg);cursor:pointer;text-decoration:underline;text-decoration-color:var(--line);text-underline-offset:3px}
+.namebtn:hover{text-decoration-color:var(--accent)}
+.more{align-self:center}
+.count{font-size:13px;color:var(--muted)}
+.banner{border-radius:10px;padding:12px 14px;font-size:14px;border:1px solid var(--line);background:var(--panel)}
+.banner.err{border-color:var(--err);color:var(--err)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <h1>利用状況</h1>
+    <span class="asof"><span>集計時点 <span class="num" id="asof">—</span></span><button class="btn" id="reload" type="button">最新にする</button></span>
+  </header>
+
+  <div class="banner" id="banner">記録を読み込んでいます…</div>
+
+  <section class="filters" aria-label="絞り込み">
+    <div class="row">
+      <div class="field"><span class="lbl">期間</span>
+        <div class="seg" id="period">
+          <button type="button" data-d="1" aria-pressed="false">今日</button>
+          <button type="button" data-d="7" aria-pressed="true">7日間</button>
+          <button type="button" data-d="30" aria-pressed="false">30日間</button>
+        </div>
+      </div>
+      <div class="field"><label for="fDash">ダッシュボード</label>
+        <select id="fDash"><option value="">すべて</option><option value="園長">園長ダッシュボード</option><option value="職員">職員ダッシュボード</option></select>
+      </div>
+      <div class="field"><label for="fGarden">園</label><select id="fGarden"></select></div>
+      <div class="field"><label for="fTool">ツール</label><select id="fTool"></select></div>
+      <div class="field"><label for="fName">名前で探す</label><input type="search" id="fName" placeholder="例：佐藤"></div>
+      <button class="reset" id="reset" type="button">条件をクリア</button>
+    </div>
+  </section>
+
+  <section class="stats" aria-label="要約">
+    <div class="stat"><span class="k">閲覧回数</span><span class="v num" id="sViews">0</span><span class="s" id="sViewsSub"></span></div>
+    <div class="stat"><span class="k">閲覧した人</span><span class="v num" id="sPeople">0</span><span class="s" id="sPeopleSub"></span></div>
+    <div class="stat"><span class="k">一度も開いていない人</span><span class="v num" id="sNot">0</span><span class="s" id="sNotSub"></span></div>
+    <div class="stat"><span class="k">いちばん見られたツール</span><span class="v txt" id="sTop">—</span><span class="s" id="sTopSub"></span></div>
+  </section>
+
+  <div class="grid2">
+    <section class="panel">
+      <h2>園 × ツール　閲覧回数</h2>
+      <p class="hint">マスをクリックすると、その園・ツールの明細に絞り込みます。もう一度クリックで解除します。</p>
+      <div class="scroll"><table class="matrix" id="matrix"></table></div>
+    </section>
+    <section class="panel">
+      <h2 id="ntTitle">期間中に開いていない人</h2>
+      <p class="hint" id="ntHint"></p>
+      <ul class="notyet" id="notyet"></ul>
+    </section>
+  </div>
+
+  <section class="panel">
+    <div class="row" style="justify-content:space-between;align-items:baseline">
+      <h2>閲覧の明細</h2><span class="count" id="logCount"></span>
+    </div>
+    <div class="scroll">
+      <table class="log">
+        <thead><tr><th>日時</th><th>園</th><th>名前</th><th>権限</th><th>ダッシュボード</th><th>ツール</th></tr></thead>
+        <tbody id="logBody"></tbody>
+      </table>
+    </div>
+    <button class="btn more" id="more" type="button" hidden>さらに表示</button>
+  </section>
+</div>
+
+<!-- 園マスタ（園の並び順・正式名） -->
+<script src="https://kimkat01.github.io/staff-dashboard/gardens.js"></script>
+<script>
+(function(){
+  /* ===== 設定 ===== */
+  var LOG_API_URL = '';   // ← GAS「アクセスログ」のウェブアプリ /exec のURL
+  var VIEW_KEY = 'PgAzmLVXiEdDE3rDNSLjeY6J';   // GAS側の VIEW_KEY と同じ値
+  var FETCH_DAYS = 30;
+  var AUTO_REFRESH_MS = 5 * 60 * 1000;   // 5分ごとに自動で最新にする
+
+  /* ツールの並び順（記録にあるのにここに無いツールは、末尾に自動で足す） */
+  var TOOL_ORDER = {
+    '職員': ['ホーム','シフト管理','有給チェッカー','News & Topics','規約・マニュアル','ドメボット','ユウガボット','メンタルヘルスサポート','ご意見箱','職員紹介制度','危機管理対応状況','コーポレートブック'],
+    '園長': ['ホーム','伝達くん','有給チェッカー','規約・マニュアル','園長ガイドライン','コーポレートブック','月次収支レポート','決裁申請','採用計画申請書','給食・駐車場','文字起こし','危機管理対応状況']
+  };
+  var MANAGER_ROLES = ['園長','主任','事務','統括'];
+
+  /* ===== データ ===== */
+  var EVENTS = [];   // {t:Date, dash, garden, id, name, role, tool, pk}
+  var PEOPLE = [];   // {pk, garden, id, name, role}
+  var NOW = new Date();
+  var GARDENS = [];  // 表示する園（正式名）
+  var TOOLS = { '職員': [], '園長': [] };
+
+  var $ = function(id){ return document.getElementById(id); };
+  var esc = function(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); };
+  var squash = function(s){ return String(s || '').replace(/[\s　]/g, ''); };
+  var WD = '日月火水木金土';
+  var fmt = function(t){ return (t.getMonth()+1) + '/' + t.getDate() + '(' + WD[t.getDay()] + ') ' + ('0'+t.getHours()).slice(-2) + ':' + ('0'+t.getMinutes()).slice(-2); };
+  var ago = function(t){ var a = new Date(NOW); a.setHours(0,0,0,0); var b = new Date(t); b.setHours(0,0,0,0); var d = Math.round((a - b) / 86400000); return d <= 0 ? '今日' : d + '日前'; };
+
+  function shortName(g){
+    var s = String(g || '');
+    if(/^しおどめ保育園/.test(s)) return s.replace(/^しおどめ保育園\s*/, '') || s;
+    return s.replace('認定こども園', '').replace('ふれあいしおどめ保育園', 'ふれあい').replace('しおどめなかよし保育園', 'なかよし').replace('保育園', '') || s;
+  }
+  function isHonbu(garden, id, role){ return role === '本部' || garden === '本部' || /^9\d{3}$/.test(String(id)); }
+  function isManager(role){ return MANAGER_ROLES.indexOf(role) >= 0; }
+
+  function build(data){
+    NOW = new Date(data.now || Date.now());
+    var roleOf = {};
+    PEOPLE = [];
+    (data.roster || []).forEach(function(r){
+      var garden = r[0], id = String(r[1]), name = r[2], role = r[3] || '職員';
+      if(isHonbu(garden, id, role)) return;
+      var pk = garden + '|' + id;
+      roleOf[pk] = role;
+      PEOPLE.push({ pk:pk, garden:garden, id:id, name:name, role:role });
+    });
+    EVENTS = [];
+    (data.events || []).forEach(function(r){
+      var garden = r[2], id = String(r[3]);
+      var pk = garden + '|' + id;
+      var role = roleOf[pk] || r[5] || (r[1] === '園長' ? '園長' : '職員');
+      if(isHonbu(garden, id, role)) return;
+      EVENTS.push({ t:new Date(r[0]), dash:r[1], garden:garden, id:id, name:r[4], role:role, tool:r[6], pk:pk });
+    });
+    EVENTS.sort(function(a, b){ return b.t - a.t; });
+
+    // 園：園マスタの順。名簿か記録にある園だけ
+    var seen = {};
+    PEOPLE.forEach(function(p){ seen[p.garden] = 1; });
+    EVENTS.forEach(function(e){ seen[e.garden] = 1; });
+    GARDENS = [];
+    (window.GARDEN_MASTER || []).forEach(function(g){ if(seen[g.name]){ GARDENS.push(g.name); delete seen[g.name]; } });
+    Object.keys(seen).sort().forEach(function(g){ if(g) GARDENS.push(g); });
+
+    // ツール：決めた順＋記録にある他のツール
+    ['職員','園長'].forEach(function(d){
+      var have = {};
+      EVENTS.forEach(function(e){ if(e.dash === d) have[e.tool] = 1; });
+      // ドメボット／ユウガボットは、記録があるときだけ並べる
+      var list = TOOL_ORDER[d].filter(function(t){ return (t !== 'ドメボット' && t !== 'ユウガボット') || have[t]; });
+      Object.keys(have).forEach(function(t){ if(list.indexOf(t) < 0) list.push(t); });
+      TOOLS[d] = list;
+    });
+
+    var gv = state.garden;
+    $('fGarden').innerHTML = '<option value="">全園</option>' + GARDENS.map(function(g){ return '<option value="' + esc(g) + '">' + esc(g) + '</option>'; }).join('');
+    $('fGarden').value = GARDENS.indexOf(gv) >= 0 ? gv : '';
+    state.garden = $('fGarden').value;
+    buildToolSelect();
+    $('asof').textContent = fmt(NOW);
+  }
+
+  /* ===== 画面 ===== */
+  var state = { days:7, dash:'', garden:'', tool:'', name:'', limit:100 };
+
+  function buildToolSelect(){
+    var groups = state.dash ? [state.dash] : ['職員','園長'];
+    $('fTool').innerHTML = '<option value="">すべて</option>' + groups.map(function(g){
+      return '<optgroup label="' + g + 'ダッシュボード">' + TOOLS[g].map(function(t){ return '<option value="' + esc(g + '|' + t) + '">' + esc(t) + '</option>'; }).join('') + '</optgroup>';
+    }).join('');
+    $('fTool').value = state.tool;
+    if($('fTool').value !== state.tool) state.tool = '';
+  }
+  function since(){ var s = new Date(NOW); s.setHours(0,0,0,0); s.setDate(s.getDate() - (state.days - 1)); return s; }
+  function nameHit(n){ return !state.name || squash(n).indexOf(squash(state.name)) >= 0; }
+  function match(e, ignoreGT){
+    if(e.t < since()) return false;
+    if(state.dash && e.dash !== state.dash) return false;
+    if(!ignoreGT && state.garden && e.garden !== state.garden) return false;
+    if(!ignoreGT && state.tool && (e.dash + '|' + e.tool) !== state.tool) return false;
+    return nameHit(e.name);
+  }
+  function periodText(){ return state.days === 1 ? '今日' : '直近' + state.days + '日間'; }
+
+  function render(){
+    var rows = EVENTS.filter(function(e){ return match(e); });
+
+    // 要約
+    $('sViews').textContent = rows.length.toLocaleString();
+    $('sViewsSub').textContent = periodText();
+    var uniq = {};
+    rows.forEach(function(e){ uniq[e.pk] = 1; });
+    var managerOnly = state.dash === '園長' || (state.tool && state.tool.indexOf('園長|') === 0);
+    var pool = PEOPLE.filter(function(p){
+      return (!state.garden || p.garden === state.garden) && nameHit(p.name) && (!managerOnly || isManager(p.role));
+    });
+    $('sPeople').textContent = Object.keys(uniq).length;
+    $('sPeopleSub').textContent = '対象 ' + pool.length + '人中';
+    var not = pool.filter(function(p){ return !uniq[p.pk]; });
+    $('sNot').textContent = not.length;
+    $('sNotSub').textContent = state.tool ? state.tool.split('|')[1] + ' を' : 'どのツールも';
+    var tc = {};
+    rows.forEach(function(e){ if(e.tool === 'ホーム') return; var k = e.dash + '|' + e.tool; tc[k] = (tc[k] || 0) + 1; });
+    var top = Object.keys(tc).map(function(k){ return [k, tc[k]]; }).sort(function(a, b){ return b[1] - a[1]; })[0];
+    $('sTop').textContent = top ? top[0].split('|')[1] : '—';
+    $('sTopSub').textContent = top ? top[0].split('|')[0] + 'ダッシュボード・' + top[1] + '回（ホームを除く）' : '';
+
+    // 園×ツール表
+    var base = EVENTS.filter(function(e){ return match(e, true); });
+    var cnt = {};
+    base.forEach(function(e){ var k = e.dash + '|' + e.tool + '|' + e.garden; cnt[k] = (cnt[k] || 0) + 1; });
+    var max = 1;
+    Object.keys(cnt).forEach(function(k){ if(k.split('|')[1] !== 'ホーム' && cnt[k] > max) max = cnt[k]; });
+    var heat = function(v){ return v === 0 ? 'var(--heat0)' : 'var(--heat' + Math.min(4, 1 + Math.floor(Math.min(v, max) / max * 3.999)) + ')'; };
+    var groups = state.dash ? [state.dash] : ['職員','園長'];
+    var h = '<thead><tr><th></th>' + GARDENS.map(function(g){ return '<th title="' + esc(g) + '">' + esc(shortName(g)) + '</th>'; }).join('') + '<th>合計</th></tr></thead><tbody>';
+    groups.forEach(function(g){
+      h += '<tr class="grp"><th colspan="' + (GARDENS.length + 2) + '">' + g + 'ダッシュボード</th></tr>';
+      TOOLS[g].forEach(function(t){
+        var sum = 0;
+        h += '<tr><th>' + esc(t) + '</th>';
+        GARDENS.forEach(function(s){
+          var v = cnt[g + '|' + t + '|' + s] || 0; sum += v;
+          var sel = state.tool === g + '|' + t && state.garden === s;
+          var strong = v > max * 0.6;
+          h += '<td class="cell num' + (v ? '' : ' zero') + (sel ? ' sel' : '') + '" tabindex="0" data-k="' + esc(g + '|' + t) + '" data-g="' + esc(s) + '" style="background:' + heat(v) + ';' + (strong ? 'color:var(--accent-ink)' : '') + '" title="' + esc(s + '・' + t + '：' + v + '回') + '">' + v + '</td>';
+        });
+        h += '<td class="tot num">' + sum + '</td></tr>';
+      });
+    });
+    $('matrix').innerHTML = h + '</tbody>';
+
+    // 開いていない人
+    $('ntTitle').textContent = state.tool ? '「' + state.tool.split('|')[1] + '」を開いていない人' : '期間中に開いていない人';
+    $('ntHint').textContent = periodText() + 'に一度も開いていない人。右は最後に開いた日（' + FETCH_DAYS + '日以内）。';
+    var lastOf = function(p){
+      for(var i = 0; i < EVENTS.length; i++){
+        var e = EVENTS[i];
+        if(e.pk === p.pk && (!state.dash || e.dash === state.dash) && (!state.tool || (e.dash + '|' + e.tool) === state.tool)) return e;
+      }
+      return null;
+    };
+    var list = not.map(function(p){ return { p:p, last:lastOf(p) }; })
+                  .sort(function(a, b){ return (a.last ? a.last.t : 0) - (b.last ? b.last.t : 0) || a.p.garden.localeCompare(b.p.garden, 'ja'); });
+    $('notyet').innerHTML = !PEOPLE.length ? '<li class="empty">職員名簿を読み込めませんでした。</li>'
+      : list.length ? list.map(function(x){
+          return '<li><span class="who">' + esc(x.p.name) + ' <span class="role">' + esc(x.p.role) + '</span><small>' + esc(x.p.garden) + '</small></span>' +
+                 '<span class="last' + (x.last ? '' : ' never') + '">' + (x.last ? '最終 ' + ago(x.last.t) : FETCH_DAYS + '日以上なし') + '</span></li>';
+        }).join('')
+      : '<li class="empty">全員が開いています。</li>';
+
+    // 明細
+    $('logCount').textContent = rows.length.toLocaleString() + '件中 ' + Math.min(rows.length, state.limit) + '件を表示（新しい順）';
+    $('logBody').innerHTML = rows.slice(0, state.limit).map(function(e){
+      return '<tr><td class="num">' + fmt(e.t) + '</td><td>' + esc(e.garden) + '</td><td><button class="namebtn" type="button" data-name="' + esc(e.name) + '">' + esc(e.name) + '</button></td>' +
+             '<td class="role">' + esc(e.role) + '</td><td><span class="tag' + (e.dash === '園長' ? ' encho' : '') + '">' + esc(e.dash) + '</span></td><td>' + esc(e.tool) + '</td></tr>';
+    }).join('') || '<tr><td colspan="6" class="empty">この条件の閲覧はありません。</td></tr>';
+    $('more').hidden = rows.length <= state.limit;
+
+    Array.prototype.forEach.call(document.querySelectorAll('#period button'), function(b){ b.setAttribute('aria-pressed', String(+b.getAttribute('data-d') === state.days)); });
+  }
+
+  function syncInputs(){ $('fDash').value = state.dash; $('fGarden').value = state.garden; $('fTool').value = state.tool; $('fName').value = state.name; }
+  function set(patch){
+    for(var k in patch) state[k] = patch[k];
+    state.limit = 100;
+    if('dash' in patch) buildToolSelect();
+    syncInputs();
+    render();
+  }
+
+  $('period').addEventListener('click', function(e){ var b = e.target.closest('button'); if(b) set({ days: +b.getAttribute('data-d') }); });
+  $('fDash').addEventListener('change', function(e){ set({ dash: e.target.value }); });
+  $('fGarden').addEventListener('change', function(e){ set({ garden: e.target.value }); });
+  $('fTool').addEventListener('change', function(e){ set({ tool: e.target.value }); });
+  $('fName').addEventListener('input', function(e){ set({ name: e.target.value.trim() }); });
+  $('reset').addEventListener('click', function(){ state.dash = ''; buildToolSelect(); set({ days:7, dash:'', garden:'', tool:'', name:'' }); });
+  function cellPick(td){
+    var k = td.getAttribute('data-k'), g = td.getAttribute('data-g');
+    var same = state.tool === k && state.garden === g;
+    set(same ? { tool:'', garden:'' } : { tool:k, garden:g });
+  }
+  $('matrix').addEventListener('click', function(e){ var td = e.target.closest('td.cell'); if(td) cellPick(td); });
+  $('matrix').addEventListener('keydown', function(e){ var td = e.target.closest('td.cell'); if(td && (e.key === 'Enter' || e.key === ' ')){ e.preventDefault(); cellPick(td); } });
+  $('logBody').addEventListener('click', function(e){ var b = e.target.closest('.namebtn'); if(b) set({ name: squash(b.getAttribute('data-name')) }); });
+  $('more').addEventListener('click', function(){ state.limit += 200; render(); });
+
+  /* ===== 読み込み ===== */
+  function banner(text, isErr){
+    var b = $('banner');
+    b.hidden = !text;
+    b.textContent = text || '';
+    b.className = 'banner' + (isErr ? ' err' : '');
+  }
+  function load(){
+    if(!LOG_API_URL){
+      banner('記録用GAS（アクセスログ）のURLがまだ設定されていません。設定すると、ここに実際の記録が表示されます。', true);
+      buildToolSelect(); render();
+      return;
+    }
+    $('reload').disabled = true;
+    fetch(LOG_API_URL + '?key=' + encodeURIComponent(VIEW_KEY) + '&days=' + FETCH_DAYS + '&t=' + Date.now())
+      .then(function(r){ if(!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+      .then(function(d){
+        if(!d || !d.ok) throw new Error(d && d.error === 'key' ? '合言葉（VIEW_KEY）がGASと一致していません' : '記録を読み込めませんでした');
+        build(d);
+        banner(EVENTS.length ? '' : '記録はまだありません。園長・職員がダッシュボードのツールを開くと、ここに表示されます。');
+        render();
+      })
+      .catch(function(err){
+        banner('記録を読み込めませんでした（' + (err && err.message || '通信エラー') + '）。「最新にする」でもう一度お試しください。', true);
+      })
+      .then(function(){ $('reload').disabled = false; });
+  }
+  $('reload').addEventListener('click', load);
+  load();
+  setInterval(function(){ if(!document.hidden) load(); }, AUTO_REFRESH_MS);
+})();
+</script>
+</body>
+</html>
