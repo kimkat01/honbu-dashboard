@@ -819,5 +819,18 @@ document.querySelectorAll('.cam-select').forEach(function (sel) {
   });
 });
 </script>
+<!-- ===== 園長とのチャット（2026-10）：中身は kimkat01/shiodome-knowledge の chat-widget.js（園長ダッシュボードと共通）
+     右下の💬で開く。全園の「園 ⇔ 本部」の部屋を一覧から選ぶ。未読は赤い数字で表示 ===== -->
+<script src="https://kimkat01.github.io/staff-dashboard/gardens.js"></script>
+<script src="https://kimkat01.github.io/shiodome-knowledge/chat-widget.js"></script>
+<script>
+  if (window.ShiodomeChat && ShiodomeChat.enabled) {
+    ShiodomeChat.init({
+      side: 'honbu',
+      user: function () { return { loginId: 'honbu', name: '' }; },
+      accent: '#3a63d8'
+    });
+  }
+</script>
 </body>
 </html>
