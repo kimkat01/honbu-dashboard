@@ -174,7 +174,11 @@ td.tot{font-weight:700}
   /* ===== 設定 ===== */
   var LOG_API_URL = 'https://script.google.com/macros/s/AKfycbxtFnYXdUs1XW5nIEoLmbJXo7HlGe7z4r-Uftuxv-tZq-CNF1vOk3JKzQXOUC7h-cAMSw/exec';   // ← GAS「アクセスログ」のウェブアプリ /exec のURL
   var VIEW_KEY = 'PgAzmLVXiEdDE3rDNSLjeY6J';   // GAS側の VIEW_KEY と同じ値
-  var FETCH_DAYS = 30;
+  var FETCH_DAYS = 90;   // GASから受け取る最大日数（GAS側の上限も90日）
+  /* 記録の開始日（2026-10-14）。これより前は数えない。
+     「開いていない人」も、この日以降に一度も開いていない人を出す */
+  var START_DATE = new Date(2026, 9, 14);
+  var START_LABEL = (START_DATE.getMonth() + 1) + '/' + START_DATE.getDate();
   var AUTO_REFRESH_MS = 5 * 60 * 1000;   // 5分ごとに自動で最新にする
 
   /* ツールの並び順（記録にあるのにここに無いツールは、末尾に自動で足す） */
@@ -223,6 +227,7 @@ td.tot{font-weight:700}
       var pk = garden + '|' + id;
       var role = roleOf[pk] || r[5] || (r[1] === '園長' ? '園長' : '職員');
       if(isHonbu(garden, id, role)) return;
+      if(new Date(r[0]) < START_DATE) return;   // 記録開始より前（テスト分など）は数えない
       EVENTS.push({ t:new Date(r[0]), dash:r[1], garden:garden, id:id, name:r[4], role:role, tool:r[6], pk:pk });
     });
     EVENTS.sort(function(a, b){ return b.t - a.t; });
@@ -264,7 +269,8 @@ td.tot{font-weight:700}
     $('fTool').value = state.tool;
     if($('fTool').value !== state.tool) state.tool = '';
   }
-  function since(){ var s = new Date(NOW); s.setHours(0,0,0,0); s.setDate(s.getDate() - (state.days - 1)); return s; }
+  function since(){ var s = new Date(NOW); s.setHours(0,0,0,0); s.setDate(s.getDate() - (state.days - 1)); return s < START_DATE ? new Date(START_DATE) : s; }
+  function clipped(){ var s = new Date(NOW); s.setHours(0,0,0,0); s.setDate(s.getDate() - (state.days - 1)); return s < START_DATE; }
   function nameHit(n){ return !state.name || squash(n).indexOf(squash(state.name)) >= 0; }
   function match(e, ignoreGT){
     if(e.t < since()) return false;
@@ -273,7 +279,7 @@ td.tot{font-weight:700}
     if(!ignoreGT && state.tool && (e.dash + '|' + e.tool) !== state.tool) return false;
     return nameHit(e.name);
   }
-  function periodText(){ return state.days === 1 ? '今日' : '直近' + state.days + '日間'; }
+  function periodText(){ return state.days === 1 ? '今日' : clipped() ? '記録開始（' + START_LABEL + '）から' : '直近' + state.days + '日間'; }
 
   function render(){
     var rows = EVENTS.filter(function(e){ return match(e); });
@@ -325,7 +331,7 @@ td.tot{font-weight:700}
 
     // 開いていない人
     $('ntTitle').textContent = state.tool ? '「' + state.tool.split('|')[1] + '」を開いていない人' : '期間中に開いていない人';
-    $('ntHint').textContent = periodText() + 'に一度も開いていない人。右は最後に開いた日（' + FETCH_DAYS + '日以内）。';
+    $('ntHint').textContent = periodText() + 'に一度も開いていない人。右は最後に開いた日（記録開始の' + START_LABEL + '以降）。';
     var lastOf = function(p){
       for(var i = 0; i < EVENTS.length; i++){
         var e = EVENTS[i];
@@ -338,7 +344,7 @@ td.tot{font-weight:700}
     $('notyet').innerHTML = !PEOPLE.length ? '<li class="empty">職員名簿を読み込めませんでした。</li>'
       : list.length ? list.map(function(x){
           return '<li><span class="who">' + esc(x.p.name) + ' <span class="role">' + esc(x.p.role) + '</span><small>' + esc(x.p.garden) + '</small></span>' +
-                 '<span class="last' + (x.last ? '' : ' never') + '">' + (x.last ? '最終 ' + ago(x.last.t) : FETCH_DAYS + '日以上なし') + '</span></li>';
+                 '<span class="last' + (x.last ? '' : ' never') + '">' + (x.last ? '最終 ' + ago(x.last.t) : START_LABEL + '以降なし') + '</span></li>';
         }).join('')
       : '<li class="empty">全員が開いています。</li>';
 
