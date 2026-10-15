@@ -118,8 +118,8 @@ td.tot{font-weight:700}
     <div class="row">
       <div class="field"><span class="lbl">期間</span>
         <div class="seg" id="period">
-          <button type="button" data-d="1" aria-pressed="false">今日</button>
-          <button type="button" data-d="7" aria-pressed="true">7日間</button>
+          <button type="button" data-d="1" aria-pressed="true">今日</button>
+          <button type="button" data-d="7" aria-pressed="false">7日間</button>
           <button type="button" data-d="30" aria-pressed="false">30日間</button>
         </div>
       </div>
@@ -259,7 +259,7 @@ td.tot{font-weight:700}
   }
 
   /* ===== 画面 ===== */
-  var state = { days:7, dash:'', garden:'', tool:'', name:'', limit:100 };
+  var state = { days:1, dash:'', garden:'', tool:'', name:'', limit:100 };
 
   function buildToolSelect(){
     var groups = state.dash ? [state.dash] : ['職員','園長'];
@@ -373,7 +373,7 @@ td.tot{font-weight:700}
   $('fGarden').addEventListener('change', function(e){ set({ garden: e.target.value }); });
   $('fTool').addEventListener('change', function(e){ set({ tool: e.target.value }); });
   $('fName').addEventListener('input', function(e){ set({ name: e.target.value.trim() }); });
-  $('reset').addEventListener('click', function(){ state.dash = ''; buildToolSelect(); set({ days:7, dash:'', garden:'', tool:'', name:'' }); });
+  $('reset').addEventListener('click', function(){ state.dash = ''; buildToolSelect(); set({ days:1, dash:'', garden:'', tool:'', name:'' }); });
   function cellPick(td){
     var k = td.getAttribute('data-k'), g = td.getAttribute('data-g');
     var same = state.tool === k && state.garden === g;
