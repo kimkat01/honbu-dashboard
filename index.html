@@ -444,6 +444,65 @@
   }
   #pw-gate button:hover { filter: brightness(1.08); }
   #pw-gate .err { color: #ff8a80; font-size: 12px; min-height: 16px; margin-top: 4px; }
+
+  /* --- 職員ダッシュボード：スマホ枠で見る（2026-10） --- */
+  #sdPhone {
+    position: fixed;
+    inset: 0;
+    z-index: 90;
+    background: rgba(6, 8, 16, 0.72);
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 14px;
+  }
+  #sdPhone.open { display: flex; }
+  #sdPhone .ph-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    max-width: 420px;
+  }
+  #sdPhone .ph-bar select {
+    flex: 1;
+    min-width: 0;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    color: #1b2340;
+    background: #fff;
+    border: 0;
+    border-radius: 8px;
+    padding: 7px 10px;
+  }
+  #sdPhone .ph-btn {
+    font: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    color: #fff;
+    text-decoration: none;
+    white-space: nowrap;
+    background: rgba(255, 255, 255, 0.14);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    border-radius: 8px;
+    padding: 6px 12px;
+    cursor: pointer;
+  }
+  #sdPhone .ph-btn:hover { background: rgba(255, 255, 255, 0.24); }
+  #sdPhone .ph-frame {
+    width: 390px;
+    max-width: 100%;
+    height: min(844px, calc(100vh - 90px));
+    border: 12px solid #111;
+    border-radius: 42px;
+    background: #fff;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+  }
+  #sdPhone iframe { width: 100%; height: 100%; border: 0; display: block; background: #fff; }
 </style>
 <!-- ★ 高速化（2026-10）
      ・preconnect：リンク先のサーバーへ事前に接続しておき、クリック後の接続待ちを省く
@@ -664,12 +723,22 @@
         <div class="desc">ドメボットへの質問記録（日時・園名・質問内容）</div>
       </a>
 
-      <a class="card disabled" href="#" aria-disabled="true">
-        <span class="pill muted">リンク未設定</span>
-        <div class="icon c-red">🛡️</div>
-        <div class="title">危機管理対応状況</div>
-        <div class="desc">災害時の安否確認・回答率を園ごとに集計（BCP）</div>
-      </a>
+      <!-- 職員ダッシュボード（2026-10、旧「危機管理対応状況」の場所）：園を選んで、その園の職員ダッシュボードを本部閲覧モードで開く
+           ・「別タブ」＝新しいタブで開く／「スマホで見る」＝このページの上にスマホ枠で表示
+           ・本部閲覧モード（?view=honbu）はログイン不要・記録や送信は行わない（仕組みは staff-dashboard/index.html 側） -->
+      <div class="card card-split" id="sdCard">
+        <div class="icon c-green">📱</div>
+        <div class="title">職員ダッシュボード</div>
+        <div class="cam-selects">
+          <select class="cam-select" id="sdGarden" aria-label="職員ダッシュボード：園を選ぶ"></select>
+        </div>
+        <div class="stat-row">
+          <div class="stat-actions">
+            <a class="sheet-btn" id="sdOpenTab" href="#" target="_blank" rel="noopener">↗ 別タブ</a>
+            <a class="sheet-btn" id="sdOpenPhone" href="#" role="button">📱 スマホで見る</a>
+          </div>
+        </div>
+      </div>
 
       <!-- 利用状況（2026-10）：園長・職員ダッシュボードで「誰が・いつ・どのツールを開いたか」の一覧（このリポジトリの riyo-jokyo.html）
            記録は GAS「アクセスログ」（cryk0289）にたまる -->
@@ -686,6 +755,16 @@
 
 <footer>しおどめグループ 本部ダッシュボード</footer>
 
+<!-- 職員ダッシュボードをスマホ枠で表示（「職員ダッシュボード」カードの「スマホで見る」から開く） -->
+<div id="sdPhone" role="dialog" aria-modal="true" aria-label="職員ダッシュボード（スマホ表示）">
+  <div class="ph-bar">
+    <select id="sdPhoneGarden" aria-label="表示する園"></select>
+    <a class="ph-btn" id="sdPhoneTab" href="#" target="_blank" rel="noopener">↗ 別タブ</a>
+    <button class="ph-btn" id="sdPhoneClose" type="button">✕ 閉じる</button>
+  </div>
+  <div class="ph-frame"><iframe id="sdPhoneFrame" title="職員ダッシュボード" src="about:blank"></iframe></div>
+</div>
+
 <script>
   (function () {
     var GATE_ENABLED = false; // パスワードゲートを復活させる時は true に戻す
@@ -698,6 +777,8 @@
     function unlock() {
       gate.style.display = 'none';
       main.classList.remove('hidden');
+      // 職員ダッシュボードの「本部閲覧モード」用の目印（同じ kimkat01.github.io なので職員ダッシュボード側から読める。7日間有効）
+      try { localStorage.setItem('sd_honbu_viewer', String(Date.now())); } catch (e) {}
     }
 
     if (!GATE_ENABLED) {
@@ -817,7 +898,7 @@ const CAMERA_LINKS = {
   panasonic: { S11: "" }
 };
 const CAMERA_NAMES = { ems2: "EMS2カメラ", guardstation: "GuardStationカメラ", panasonic: "Panasonicカメラ" };
-document.querySelectorAll('.cam-select').forEach(function (sel) {
+document.querySelectorAll('.cam-select[data-cam]').forEach(function (sel) {
   sel.addEventListener('change', function () {
     const cam = sel.dataset.cam;
     const code = sel.value;
@@ -863,6 +944,71 @@ document.querySelectorAll('.cam-select').forEach(function (sel) {
       }
     });
   })();
+</script>
+<script>
+/* ===== 職員ダッシュボード（2026-10）=====
+   ・園の一覧は staff-dashboard/gardens.js の GARDEN_MASTER（上で読み込み済み）から作る
+   ・開くURLには view=honbu を付ける（職員ダッシュボード側でログインを飛ばし、記録・送信を止める）
+   ・ふれあいしおどめ保育園（S09）は専用リポジトリで運用中のため、そちらを開く（本部閲覧モードは未対応） */
+(function () {
+  var BASE = 'https://kimkat01.github.io/staff-dashboard/';
+  var SPECIAL_URL = { fureai_shiodome: 'https://kimkat01.github.io/fureai-moriya-staff-dashboard/' };
+  var LAST_KEY = 'honbu_sd_garden';
+  var gardens = (typeof GARDEN_MASTER !== 'undefined') ? GARDEN_MASTER : [];
+
+  function urlFor(key) { return (SPECIAL_URL[key] || BASE) + '?garden=' + encodeURIComponent(key) + '&view=honbu'; }
+
+  var sel = document.getElementById('sdGarden');
+  var tab = document.getElementById('sdOpenTab');
+  var phoneBtn = document.getElementById('sdOpenPhone');
+  var modal = document.getElementById('sdPhone');
+  var mSel = document.getElementById('sdPhoneGarden');
+  var mTab = document.getElementById('sdPhoneTab');
+  var frame = document.getElementById('sdPhoneFrame');
+
+  function buildOptions(select) {
+    var groups = [['学校法人柴学園', /^S/], ['社会福祉法人雄雅会', /^Y/]];
+    select.innerHTML = groups.map(function (gr) {
+      return '<optgroup label="' + gr[0] + '">' + gardens.filter(function (g) { return gr[1].test(g.code); })
+        .map(function (g) { return '<option value="' + g.key + '">' + g.name + '</option>'; }).join('') + '</optgroup>';
+    }).join('');
+  }
+  buildOptions(sel);
+  buildOptions(mSel);
+
+  var last = '';
+  try { last = localStorage.getItem(LAST_KEY) || ''; } catch (e) {}
+  if (!gardens.some(function (g) { return g.key === last; })) last = gardens.length ? gardens[0].key : '';
+
+  function setGarden(key, reloadFrame) {
+    if (!key) return;
+    sel.value = key;
+    mSel.value = key;
+    tab.href = urlFor(key);
+    mTab.href = urlFor(key);
+    try { localStorage.setItem(LAST_KEY, key); } catch (e) {}
+    if (reloadFrame) frame.src = urlFor(key);
+  }
+  setGarden(last, false);
+
+  sel.addEventListener('change', function () { setGarden(sel.value, false); });
+  mSel.addEventListener('change', function () { setGarden(mSel.value, true); });
+
+  function openPhone() {
+    setGarden(sel.value, true);
+    modal.classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+  function closePhone() {
+    modal.classList.remove('open');
+    document.body.style.overflow = '';
+    frame.src = 'about:blank';
+  }
+  phoneBtn.addEventListener('click', function (e) { e.preventDefault(); openPhone(); });
+  document.getElementById('sdPhoneClose').addEventListener('click', closePhone);
+  modal.addEventListener('click', function (e) { if (e.target === modal) closePhone(); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && modal.classList.contains('open')) closePhone(); });
+})();
 </script>
 </body>
 </html>
