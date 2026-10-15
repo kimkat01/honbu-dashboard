@@ -391,29 +391,49 @@ td.tot{font-weight:700}
     b.textContent = text || '';
     b.className = 'banner' + (isErr ? ' err' : '');
   }
-  function load(){
+  /* 2026-10-16：表示の高速化
+     ・前回読み込んだ記録をこのブラウザに保存しておき、開いたらすぐそれを表示する（最新は裏で取りに行く）
+     ・GASの応答が FETCH_TIMEOUT_MS を過ぎたら打ち切って、お知らせを出す（いつまでも「読み込み中」にしない）
+     ・「最新にする」ボタンは fresh=1 を付けて、GAS側の作り置きを使わずに読み直す */
+  var CACHE_KEY = 'riyo_jokyo_cache_v1';
+  var FETCH_TIMEOUT_MS = 25000;
+  var shown = false;   // 画面に記録を出したことがあるか
+  function saveCache(d){ try{ localStorage.setItem(CACHE_KEY, JSON.stringify(d)); }catch(e){} }
+  function loadCache(){ try{ var s = localStorage.getItem(CACHE_KEY); return s ? JSON.parse(s) : null; }catch(e){ return null; } }
+  function showData(d){ build(d); render(); shown = true; }
+
+  function load(fresh){
     if(!LOG_API_URL){
       banner('記録用GAS（アクセスログ）のURLがまだ設定されていません。設定すると、ここに実際の記録が表示されます。', true);
       buildToolSelect(); render();
       return;
     }
     $('reload').disabled = true;
-    fetch(LOG_API_URL + '?key=' + encodeURIComponent(VIEW_KEY) + '&days=' + FETCH_DAYS + '&t=' + Date.now())
+    if(shown) banner('最新の記録を読み込んでいます…（いま表示しているのは ' + $('asof').textContent + ' 時点）');
+    var ctrl = window.AbortController ? new AbortController() : null;
+    var timer = setTimeout(function(){ if(ctrl) ctrl.abort(); }, FETCH_TIMEOUT_MS);
+    fetch(LOG_API_URL + '?key=' + encodeURIComponent(VIEW_KEY) + '&days=' + FETCH_DAYS + (fresh ? '&fresh=1' : '') + '&t=' + Date.now(),
+          ctrl ? { signal: ctrl.signal } : undefined)
       .then(function(r){ if(!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
       .then(function(d){
         if(!d || !d.ok) throw new Error(d && d.error === 'key' ? '合言葉（VIEW_KEY）がGASと一致していません' : '記録を読み込めませんでした');
-        build(d);
+        saveCache(d);
+        showData(d);
         banner(EVENTS.length ? '' : '記録はまだありません。園長・職員がダッシュボードのツールを開くと、ここに表示されます。');
-        render();
       })
       .catch(function(err){
-        banner('記録を読み込めませんでした（' + (err && err.message || '通信エラー') + '）。「最新にする」でもう一度お試しください。', true);
+        var msg = (err && err.name === 'AbortError') ? '記録用GASの応答に時間がかかっています' : '記録を読み込めませんでした（' + (err && err.message || '通信エラー') + '）';
+        banner(msg + '。' + (shown ? 'いまは ' + $('asof').textContent + ' 時点の記録を表示しています。' : '') + '少し待ってから「最新にする」を押してください。', true);
       })
-      .then(function(){ $('reload').disabled = false; });
+      .then(function(){ clearTimeout(timer); $('reload').disabled = false; });
   }
-  $('reload').addEventListener('click', load);
-  load();
-  setInterval(function(){ if(!document.hidden) load(); }, AUTO_REFRESH_MS);
+  $('reload').addEventListener('click', function(){ load(true); });
+  var cached = loadCache();
+  if(cached && cached.ok){
+    try{ showData(cached); banner('最新の記録を読み込んでいます…（いま表示しているのは ' + $('asof').textContent + ' 時点）'); }catch(e){ shown = false; }
+  }
+  load(false);
+  setInterval(function(){ if(!document.hidden) load(false); }, AUTO_REFRESH_MS);
 })();
 </script>
 </body>
