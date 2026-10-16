@@ -10,6 +10,8 @@
    ① ログインID＋パスワード → 正しければ、登録メールに6桁の確認コードを送る
    ② 確認コード → 正しければ「通行証（トークン）」を発行（12時間有効）
    ③ 件数の取得は、正しい通行証があるときだけ返す
+   ④ 決裁承認GAS（「決裁申請 管理」）からも ?action=verify で通行証を確認する
+      （返すのはログインID・表示名・有効期限だけ）
    ・パスワードはこのコードにもシートにも平文で残さない（スクリプトプロパティに
      ハッシュ値だけを保存）
    ・パスワードを5回まちがえると、そのIDは15分間ロック
@@ -232,7 +234,7 @@ function checkToken_(token) {
 function verifyToken_(token) {
   var who = checkToken_(token);
   if (!who) return { ok: false, error: 'auth', authVersion: AUTH_VERSION };
-  return { ok: true, name: who.user.name, exp: who.exp, authVersion: AUTH_VERSION };
+  return { ok: true, id: who.user.id, name: who.user.name, exp: who.exp, authVersion: AUTH_VERSION };
 }
 
 function logout_(token) {
