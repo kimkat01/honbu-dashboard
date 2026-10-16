@@ -75,9 +75,18 @@ button:focus-visible,select:focus-visible,input:focus-visible,td.cell:focus-visi
 
 table{border-collapse:collapse;width:100%}
 .matrix th,.matrix td{font-size:13px;padding:5px 6px;text-align:center;white-space:nowrap}
-.matrix thead th{color:var(--muted);font-weight:700;border-bottom:1px solid var(--line)}
+.matrix thead th{color:var(--muted);font-weight:700}
 .matrix tbody th{text-align:left;font-weight:400}
 .matrix tr.grp th{font-size:12px;color:var(--accent);font-weight:700;letter-spacing:.06em;padding-top:12px;text-align:left}
+/* 園×ツール表：Excelの「ウィンドウ枠の固定」と同じ動き（2026-10）
+   ・一番上の園名の行と、左のツール名の列を固定。表は枠の中で縦・横にスクロール */
+.scroll.mx{overflow:auto;max-height:72vh;overscroll-behavior:contain}
+.matrix{width:auto;min-width:100%}
+.matrix thead th{position:sticky;top:0;z-index:2;background:var(--panel);box-shadow:inset 0 -1px 0 var(--line)}
+.matrix tbody th{position:sticky;left:0;z-index:1;background:var(--panel);box-shadow:inset -1px 0 0 var(--line)}
+.matrix thead th:first-child{left:0;z-index:3;box-shadow:inset -1px -1px 0 var(--line)}
+.matrix tr.grp th{position:static;box-shadow:none;background:transparent}
+.matrix tr.grp th span{position:sticky;left:6px}
 td.cell{cursor:pointer;border-radius:4px;min-width:44px}
 td.cell.zero{color:var(--muted)}
 td.cell.sel{outline:2px solid var(--fg);outline-offset:-2px}
@@ -143,8 +152,8 @@ td.tot{font-weight:700}
   <div class="grid2">
     <section class="panel">
       <h2>園 × ツール　閲覧回数</h2>
-      <p class="hint">マスをクリックすると、その園・ツールの明細に絞り込みます。もう一度クリックで解除します。</p>
-      <div class="scroll"><table class="matrix" id="matrix"></table></div>
+      <p class="hint">マスをクリックすると、その園・ツールの明細に絞り込みます。もう一度クリックで解除します。園が多いときは表を横にスクロールできます（園名の行とツール名の列は固定）。</p>
+      <div class="scroll mx"><table class="matrix" id="matrix"></table></div>
     </section>
     <section class="panel">
       <h2 id="ntTitle">期間中に開いていない人</h2>
@@ -314,7 +323,7 @@ td.tot{font-weight:700}
     var groups = state.dash ? [state.dash] : ['職員','園長'];
     var h = '<thead><tr><th></th>' + GARDENS.map(function(g){ return '<th title="' + esc(g) + '">' + esc(shortName(g)) + '</th>'; }).join('') + '<th>合計</th></tr></thead><tbody>';
     groups.forEach(function(g){
-      h += '<tr class="grp"><th colspan="' + (GARDENS.length + 2) + '">' + g + 'ダッシュボード</th></tr>';
+      h += '<tr class="grp"><th colspan="' + (GARDENS.length + 2) + '"><span>' + g + 'ダッシュボード</span></th></tr>';
       TOOLS[g].forEach(function(t){
         var sum = 0;
         h += '<tr><th>' + esc(t) + '</th>';
