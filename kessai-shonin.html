@@ -305,10 +305,10 @@
 <main>
   <!-- 合言葉 -->
   <section class="login hidden" id="loginView">
-    <h2>決裁承認にログイン</h2>
-    <p>法人本部用、または理事長用の合言葉を入力してください。合言葉によって押せる承認欄が決まります。</p>
-    <input type="password" id="keyInput" placeholder="合言葉" autocomplete="current-password">
-    <div class="row"><button class="btn" id="loginBtn" type="button" style="flex:1">ログイン</button></div>
+    <h2>決裁承認</h2>
+    <p>どちらの立場で開くかを選んでください。選んだ立場の承認欄だけ押せます。<br>（次回からは自動で同じ立場で開きます）</p>
+    <div class="row"><button class="btn" id="loginHonbu" type="button" style="flex:1">法人本部として開く</button></div>
+    <div class="row"><button class="btn" id="loginRijicho" type="button" style="flex:1">理事長として開く</button></div>
     <div class="msg" id="loginMsg"></div>
   </section>
 
@@ -361,6 +361,10 @@ var ST = { HONBU: '本部確認待ち', RIJICHO: '理事長確認待ち', DONE: 
 var ROLE_LABEL = { honbu: '法人本部', rijicho: '理事長' };
 var state = { key: '', role: '', items: [], tab: 'mine', q: '', current: null };
 
+// 2026-10-16：合言葉の入力を廃止。ボタンで立場を選ぶと、下の合言葉を自動で送る
+//   （GAS「決裁申請 管理」の CONFIG.HONBU_KEY / RIJICHO_KEY と同じ値にしておくこと）
+var AUTO_KEYS = { honbu: 'honbu_kessai_2026', rijicho: 'rijicho_kessai_2026' };
+
 /* ======== テーマ（本部ダッシュボードと共通の設定を使う） ======== */
 (function () {
   var root = document.documentElement;
@@ -390,20 +394,20 @@ function showLogin(msg) {
   el('roleBadge').classList.add('hidden');
   el('logoutBtn').classList.add('hidden');
   el('loginMsg').textContent = msg || '';
-  setTimeout(function () { el('keyInput').focus(); }, 50);
 }
-function doLogin() {
-  var key = el('keyInput').value.trim();
-  if (!key) { el('loginMsg').textContent = '合言葉を入力してください'; return; }
-  el('loginBtn').disabled = true;
+function doLogin(role) {
+  var key = AUTO_KEYS[role];
+  el('loginHonbu').disabled = el('loginRijicho').disabled = true;
+  el('loginMsg').textContent = '開いています…';
   api({ action: 'login', key: key }).then(function (res) {
-    el('loginBtn').disabled = false;
-    if (!res.ok) { el('loginMsg').textContent = res.error || 'ログインできませんでした'; return; }
+    el('loginHonbu').disabled = el('loginRijicho').disabled = false;
+    if (!res.ok) { el('loginMsg').textContent = '開けませんでした（GASの合言葉が変更されている可能性があります）'; return; }
     state.key = key; state.role = res.role;
-    try { sessionStorage.setItem('kessai_key', key); } catch (e) {}
+    try { localStorage.setItem('kessai_role', res.role); } catch (e) {}
+    el('loginMsg').textContent = '';
     afterLogin();
   }).catch(function () {
-    el('loginBtn').disabled = false;
+    el('loginHonbu').disabled = el('loginRijicho').disabled = false;
     el('loginMsg').textContent = '通信できませんでした。時間をおいて再度お試しください。';
   });
 }
@@ -416,11 +420,13 @@ function afterLogin() {
   el('demoNote').classList.toggle('hidden', !!GAS_URL);
   load(true);
 }
-el('loginBtn').addEventListener('click', doLogin);
-el('keyInput').addEventListener('keydown', function (e) { if (e.key === 'Enter') doLogin(); });
+el('loginHonbu').addEventListener('click', function () { doLogin('honbu'); });
+el('loginRijicho').addEventListener('click', function () { doLogin('rijicho'); });
+// ヘッダーのボタンは「立場を切り替え」として使う
+el('logoutBtn').textContent = '立場を切り替え';
 el('logoutBtn').addEventListener('click', function () {
-  try { sessionStorage.removeItem('kessai_key'); } catch (e) {}
-  state.key = ''; state.role = ''; el('keyInput').value = '';
+  try { localStorage.removeItem('kessai_role'); } catch (e) {}
+  state.key = ''; state.role = '';
   showLogin();
 });
 
@@ -720,14 +726,12 @@ function demoApi(b) {
 /* ======== 起動 ======== */
 (function start() {
   if (!GAS_URL) {
-    el('loginView').querySelector('p').innerHTML += '<br><b>デモ表示：</b>何か入力すると法人本部、「rijicho」と入力すると理事長として入れます。';
+    el('loginView').querySelector('p').innerHTML += '<br><b>デモ表示：</b>見本データを表示します。';
   }
-  var saved = ''; try { saved = sessionStorage.getItem('kessai_key') || ''; } catch (e) {}
-  if (!saved) { showLogin(); return; }
-  api({ action: 'login', key: saved }).then(function (res) {
-    if (!res.ok) { showLogin(); return; }
-    state.key = saved; state.role = res.role; afterLogin();
-  }).catch(function () { showLogin('通信できませんでした。時間をおいて再度お試しください。'); });
+  var savedRole = ''; try { savedRole = localStorage.getItem('kessai_role') || ''; } catch (e) {}
+  if (!AUTO_KEYS[savedRole]) { showLogin(); return; }
+  showLogin('開いています…');
+  doLogin(savedRole);
 })();
 </script>
 </body>
