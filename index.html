@@ -443,7 +443,21 @@
     cursor: pointer;
   }
   #pw-gate button:hover { filter: brightness(1.08); }
-  #pw-gate .err { color: #ff8a80; font-size: 12px; min-height: 16px; margin-top: 4px; }
+  #pw-gate .err { color: #ff8a80; font-size: 12px; min-height: 16px; margin-top: 8px; line-height: 1.6; }
+  #pw-gate .hidden { display: none; }
+  #pw-gate button:disabled { opacity: .6; cursor: wait; }
+  #pw-gate button.link {
+    background: none; color: var(--muted); font-weight: 400; font-size: 12px;
+    margin-top: 10px; padding: 4px; text-decoration: underline;
+  }
+  #pw-gate #gate-code { font-size: 22px; letter-spacing: 6px; text-align: center; }
+  #pw-gate #gate-code::placeholder { font-size: 14px; letter-spacing: normal; }
+  .logout-btn {
+    border: 1px solid var(--panel-border); background: transparent; color: var(--muted);
+    font-size: 12px; padding: 5px 10px; border-radius: 8px; cursor: pointer; margin-left: 8px;
+  }
+  .logout-btn:hover { color: var(--ink); }
+  .logout-btn.hidden { display: none; }
 
   /* --- 職員ダッシュボード：スマホ枠で見る（2026-10） --- */
   #sdPhone {
@@ -528,12 +542,29 @@
 </head>
 <body>
 
+<!-- 2段階認証（2026-10）：①ID＋パスワード → ②メールの6桁コード。判定はすべてGAS側で行い、このページには鍵を置かない -->
 <div id="pw-gate">
   <div class="box">
     <h2>本部ダッシュボード</h2>
-    <p>本部専用ページです。パスワードを入力してください。</p>
-    <input type="password" id="pw-input" placeholder="パスワード" autocomplete="off" inputmode="text">
-    <button id="pw-submit">入る</button>
+
+    <div class="step" id="gate-loading">
+      <p>ログイン状態を確認しています…</p>
+    </div>
+
+    <div class="step hidden" id="gate-step1">
+      <p>本部専用ページです。ログインIDとパスワードを入力してください。</p>
+      <input type="text" id="gate-id" placeholder="ログインID（例：honbu1）" autocomplete="username" autocapitalize="off" spellcheck="false">
+      <input type="password" id="gate-pw" placeholder="パスワード" autocomplete="current-password">
+      <button id="gate-login" type="button">次へ</button>
+    </div>
+
+    <div class="step hidden" id="gate-step2">
+      <p id="gate-sent">登録メールに6桁の確認コードを送りました。</p>
+      <input type="text" id="gate-code" placeholder="6桁の確認コード" inputmode="numeric" autocomplete="one-time-code" maxlength="6">
+      <button id="gate-verify" type="button">ログイン</button>
+      <button id="gate-back" class="link" type="button">IDとパスワードの入力に戻る</button>
+    </div>
+
     <div class="err" id="pw-err"></div>
   </div>
 </div>
@@ -548,6 +579,7 @@
     <span class="track"><span class="knob"></span></span>
     <span class="icon-sun">☀️</span>
   </button>
+  <button class="logout-btn hidden" id="logout-btn" type="button" title="このPCでのログインを終了">ログアウト</button>
 </header>
 
 <main class="hidden" id="main">
@@ -766,40 +798,146 @@
 </div>
 
 <script>
+  /* ============================================================
+     2段階認証（2026-10）
+     ・GAS「本部ダッシュボード 件数API」がログインの判定をする（このページに鍵は置かない）
+     ・①ログインID＋パスワード → ②登録メールに届く6桁コード → 通行証（12時間有効）
+     ・通行証はこのPCのブラウザに保存。別タブで開いても入り直し不要
+     ・GASがまだ2段階認証版でないとき（authVersion が返らない）は、従来どおりそのまま開く
+     ============================================================ */
   (function () {
-    var GATE_ENABLED = false; // パスワードゲートを復活させる時は true に戻す
-    var PW = "honbu2026"; // 仮パスワード。必要に応じて変更してください
+    var AUTH_URL = 'https://script.google.com/macros/s/AKfycbzJHhK-jajUwamz69kCWfZu6H2-L9Z4_Hos7O5VrQFd_CHVrMH1HT5AvhgzPIBU-Kx4/exec';
+    var TOKEN_KEY = 'honbu_token';
     var gate = document.getElementById('pw-gate');
     var main = document.getElementById('main');
-    var input = document.getElementById('pw-input');
     var err = document.getElementById('pw-err');
+    var logoutBtn = document.getElementById('logout-btn');
+    var pending = '';
+    var unlocked = false;
 
-    function unlock() {
+    function $(id) { return document.getElementById(id); }
+    function step(name) {
+      ['gate-loading', 'gate-step1', 'gate-step2'].forEach(function (id) {
+        $(id).classList.toggle('hidden', id !== name);
+      });
+      err.textContent = '';
+      var f = name === 'gate-step1' ? $('gate-id') : name === 'gate-step2' ? $('gate-code') : null;
+      if (f) setTimeout(function () { f.focus(); }, 50);
+    }
+    function getToken() {
+      try {
+        var t = JSON.parse(localStorage.getItem(TOKEN_KEY) || 'null');
+        if (t && t.token && t.exp > Date.now()) return t.token;
+      } catch (e) {}
+      return '';
+    }
+    function saveToken(token, exp) {
+      try { localStorage.setItem(TOKEN_KEY, JSON.stringify({ token: token, exp: exp })); } catch (e) {}
+    }
+    function clearToken() { try { localStorage.removeItem(TOKEN_KEY); } catch (e) {} }
+
+    // 件数取得など、ほかの部分から使う
+    window.HONBU_AUTH = {
+      token: getToken,
+      relock: function () { clearToken(); lock(); }
+    };
+
+    function unlock(withAuth) {
+      unlocked = true;
       gate.style.display = 'none';
       main.classList.remove('hidden');
+      logoutBtn.classList.toggle('hidden', !withAuth);
       // 職員ダッシュボードの「本部閲覧モード」用の目印（同じ kimkat01.github.io なので職員ダッシュボード側から読める。7日間有効）
       try { localStorage.setItem('sd_honbu_viewer', String(Date.now())); } catch (e) {}
+      document.dispatchEvent(new Event('honbu:unlocked'));
+    }
+    function lock() {
+      unlocked = false;
+      main.classList.add('hidden');
+      logoutBtn.classList.add('hidden');
+      gate.style.display = 'flex';
+      try { localStorage.removeItem('sd_honbu_viewer'); } catch (e) {}
+      step('gate-step1');
     }
 
-    if (!GATE_ENABLED) {
-      unlock();
-      return;
+    function post(body) {
+      return fetch(AUTH_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(body)
+      }).then(function (r) { return r.json(); });
+    }
+    function busy(btn, on) { btn.disabled = on; }
+
+    function doLogin() {
+      var id = $('gate-id').value.trim();
+      var pw = $('gate-pw').value;
+      if (!id || !pw) { err.textContent = 'ログインIDとパスワードを入力してください'; return; }
+      var btn = $('gate-login');
+      busy(btn, true); err.textContent = '確認しています…';
+      post({ action: 'login', id: id, password: pw }).then(function (res) {
+        busy(btn, false);
+        if (res.ok) {
+          pending = res.pending;
+          $('gate-pw').value = '';
+          $('gate-code').value = '';
+          step('gate-step2');
+          $('gate-sent').textContent = res.email + ' に6桁の確認コードを送りました（' + res.minutes + '分間有効）。';
+          return;
+        }
+        if (res.error === 'locked') err.textContent = '入力ミスが続いたため、' + res.minutes + '分間ログインできません。';
+        else if (res.error === 'wrong') err.textContent = 'ログインIDまたはパスワードが違います（あと' + res.left + '回でロック）';
+        else if (res.error === 'no_email') err.textContent = 'メールアドレスが未登録です。担当者に連絡してください。';
+        else err.textContent = 'エラーが起きました。少し待ってからもう一度お試しください。';
+      }).catch(function () {
+        busy(btn, false);
+        err.textContent = '接続できませんでした。ネットワークを確認してください。';
+      });
     }
 
-    function checkPw() {
-      if (input.value === PW) {
-        try { sessionStorage.setItem('honbu_pw_ok', '1'); } catch (e) {}
-        unlock();
-      } else {
-        err.textContent = 'パスワードが違います';
-      }
+    function doVerify() {
+      var code = $('gate-code').value.replace(/\D/g, '');
+      if (code.length !== 6) { err.textContent = '6桁の数字を入力してください'; return; }
+      var btn = $('gate-verify');
+      busy(btn, true); err.textContent = '確認しています…';
+      post({ action: 'code', pending: pending, code: code }).then(function (res) {
+        busy(btn, false);
+        if (res.ok) { saveToken(res.token, res.exp); pending = ''; unlock(true); return; }
+        if (res.error === 'wrong_code') err.textContent = '確認コードが違います（あと' + res.left + '回）';
+        else { step('gate-step1'); err.textContent = '確認コードの期限が切れました。もう一度ログインしてください。'; }
+      }).catch(function () {
+        busy(btn, false);
+        err.textContent = '接続できませんでした。ネットワークを確認してください。';
+      });
     }
-    document.getElementById('pw-submit').addEventListener('click', checkPw);
-    input.addEventListener('keydown', function (e) { if (e.key === 'Enter') checkPw(); });
 
-    var alreadyOk = false;
-    try { alreadyOk = sessionStorage.getItem('honbu_pw_ok') === '1'; } catch (e) {}
-    if (alreadyOk) unlock();
+    $('gate-login').addEventListener('click', doLogin);
+    $('gate-pw').addEventListener('keydown', function (e) { if (e.key === 'Enter') doLogin(); });
+    $('gate-id').addEventListener('keydown', function (e) { if (e.key === 'Enter') $('gate-pw').focus(); });
+    $('gate-verify').addEventListener('click', doVerify);
+    $('gate-code').addEventListener('keydown', function (e) { if (e.key === 'Enter') doVerify(); });
+    $('gate-back').addEventListener('click', function () { pending = ''; step('gate-step1'); });
+    logoutBtn.addEventListener('click', function () {
+      var t = getToken();
+      clearToken();
+      if (t) post({ action: 'logout', token: t }).catch(function () {});
+      lock();
+    });
+
+    // 開いたとき：保存済みの通行証が使えるかGASに確認
+    step('gate-loading');
+    var t = getToken();
+    fetch(AUTH_URL + '?action=verify&token=' + encodeURIComponent(t) + '&t=' + Date.now())
+      .then(function (r) { return r.json(); })
+      .then(function (res) {
+        if (!res || !res.authVersion) { unlock(false); return; }   // GASが旧版＝2段階認証はまだ無効
+        if (res.ok) unlock(true);
+        else { clearToken(); step('gate-step1'); }
+      })
+      .catch(function () {
+        step('gate-step1');
+        err.textContent = 'ログイン確認に接続できませんでした。時間をおいて再読み込みしてください。';
+      });
   })();
 
   (function () {
@@ -857,10 +995,15 @@
       pill.textContent = (n === null) ? '未連携' : (n === -1 ? '取得エラー' : '未接続');
     }
   }
-  function getCounts(url) {
-    return fetch(url + (url.indexOf('?') < 0 ? '?' : '&') + 't=' + Date.now())
+  function getCounts(url, withToken) {
+    var tk = (withToken && window.HONBU_AUTH) ? '&token=' + encodeURIComponent(window.HONBU_AUTH.token()) : '';
+    return fetch(url + (url.indexOf('?') < 0 ? '?' : '&') + 't=' + Date.now() + tk)
       .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
-      .then(function (res) { if (!res || !res.ok) throw new Error('NG'); return res.counts || {}; });
+      .then(function (res) {
+        if (res && !res.ok && res.error === 'auth' && window.HONBU_AUTH) { window.HONBU_AUTH.relock(); throw new Error('auth'); }
+        if (!res || !res.ok) throw new Error('NG');
+        return res.counts || {};
+      });
   }
   function apply(keys, counts) {
     cards.forEach(function (c) {
@@ -874,15 +1017,21 @@
     var others = cards.map(function (c) { return c.getAttribute('data-count'); })
                       .filter(function (k) { return own.indexOf(k) < 0; });
     if (!COUNT_API_URL) apply(others, undefined);
-    else getCounts(COUNT_API_URL).then(function (c) { apply(others, c); })
+    else getCounts(COUNT_API_URL, true).then(function (c) { apply(others, c); })
                                  .catch(function () { apply(others, -1); });   // 古い件数を出し続けない
     if (KESSAI_API_URL) {
       getCounts(KESSAI_API_URL).then(function (c) { apply(['kessai'], c); })
                                .catch(function () { apply(['kessai'], -1); });
     }
   }
-  load();
-  setInterval(load, REFRESH_MS);
+  // ログインが済んでから取りに行く（2段階認証版GASは通行証が無いと件数を返さない）
+  var timer = null;
+  document.addEventListener('honbu:unlocked', function () {
+    load();
+    if (!timer) timer = setInterval(function () {
+      if (!document.getElementById('main').classList.contains('hidden')) load();
+    }, REFRESH_MS);
+  });
 })();
 </script>
 <script>
