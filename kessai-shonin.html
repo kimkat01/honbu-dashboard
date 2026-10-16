@@ -305,10 +305,10 @@
 <main>
   <!-- 合言葉 -->
   <section class="login hidden" id="loginView">
-    <h2>決裁承認にログイン</h2>
-    <p>法人本部用、または理事長用の合言葉を入力してください。合言葉によって押せる承認欄が決まります。</p>
-    <input type="password" id="keyInput" placeholder="合言葉" autocomplete="current-password">
-    <div class="row"><button class="btn" id="loginBtn" type="button" style="flex:1">ログイン</button></div>
+    <h2>決裁承認</h2>
+    <p>決裁承認は、本部ダッシュボードにログインしている人だけが使えます（合言葉は不要です）。<br>
+       ログインした人によって、押せる承認欄（法人本部／理事長）が自動で決まります。</p>
+    <div class="row"><a class="btn" id="loginBtn" href="./index.html" style="flex:1;text-align:center;text-decoration:none">本部ダッシュボードでログイン</a></div>
     <div class="msg" id="loginMsg"></div>
   </section>
 
@@ -383,50 +383,37 @@ function api(body) {
   }).then(function (r) { return r.json(); });
 }
 
-/* ======== ログイン ======== */
+/* ======== ログイン（2026-10-16：合言葉を廃止。本部ダッシュボードの2段階認証の通行証を使う） ======== */
+// 本部ダッシュボード（index.html）でログインしたときに保存される通行証を読む
+function honbuToken() {
+  try {
+    var t = JSON.parse(localStorage.getItem('honbu_token') || 'null');
+    if (t && t.token && t.exp > Date.now()) return t.token;
+  } catch (e) {}
+  return '';
+}
 function showLogin(msg) {
   el('loginView').classList.remove('hidden');
   el('listView').classList.add('hidden');
   el('roleBadge').classList.add('hidden');
   el('logoutBtn').classList.add('hidden');
   el('loginMsg').textContent = msg || '';
-  setTimeout(function () { el('keyInput').focus(); }, 50);
-}
-function doLogin() {
-  var key = el('keyInput').value.trim();
-  if (!key) { el('loginMsg').textContent = '合言葉を入力してください'; return; }
-  el('loginBtn').disabled = true;
-  api({ action: 'login', key: key }).then(function (res) {
-    el('loginBtn').disabled = false;
-    if (!res.ok) { el('loginMsg').textContent = res.error || 'ログインできませんでした'; return; }
-    state.key = key; state.role = res.role;
-    try { sessionStorage.setItem('kessai_key', key); } catch (e) {}
-    afterLogin();
-  }).catch(function () {
-    el('loginBtn').disabled = false;
-    el('loginMsg').textContent = '通信できませんでした。時間をおいて再度お試しください。';
-  });
+  // ログイン後にこの画面（開いていた申請）へ戻ってくるようにする
+  el('loginBtn').href = './index.html?next=' + encodeURIComponent('kessai-shonin.html' + location.search);
 }
 function afterLogin() {
   el('loginView').classList.add('hidden');
   el('listView').classList.remove('hidden');
   el('roleBadge').textContent = ROLE_LABEL[state.role] + 'としてログイン中';
   el('roleBadge').classList.remove('hidden');
-  el('logoutBtn').classList.remove('hidden');
   el('demoNote').classList.toggle('hidden', !!GAS_URL);
   load(true);
 }
-el('loginBtn').addEventListener('click', doLogin);
-el('keyInput').addEventListener('keydown', function (e) { if (e.key === 'Enter') doLogin(); });
-el('logoutBtn').addEventListener('click', function () {
-  try { sessionStorage.removeItem('kessai_key'); } catch (e) {}
-  state.key = ''; state.role = ''; el('keyInput').value = '';
-  showLogin();
-});
+// ログアウトは本部ダッシュボードで行う（この画面にはログアウトボタンを出さない）
 
 /* ======== 一覧 ======== */
 function load(openFromUrl) {
-  return api({ action: 'list', key: state.key }).then(function (res) {
+  return api({ action: 'list', token: state.key }).then(function (res) {
     if (!res.ok) { showLogin(res.error); return; }
     state.role = res.role;
     state.items = res.items || [];
@@ -586,7 +573,7 @@ function decide(d) {
   try { localStorage.setItem('kessai_name_' + state.role, name); } catch (e) {}
 
   Array.prototype.forEach.call(el('actBox').querySelectorAll('button'), function (b) { b.disabled = true; });
-  api({ action: 'decide', key: state.key, appNo: it.appNo, decision: d, name: name, comment: cmt }).then(function (res) {
+  api({ action: 'decide', token: state.key, appNo: it.appNo, decision: d, name: name, comment: cmt }).then(function (res) {
     if (!res.ok) throw new Error(res.error || '保存できませんでした');
     var idx = state.items.indexOf(it);
     state.items[idx] = res.item;
@@ -700,7 +687,7 @@ function demoData() {
   return DEMO;
 }
 function demoApi(b) {
-  var role = b.key === 'rijicho' ? 'rijicho' : (b.key ? 'honbu' : '');
+  var role = b.token ? 'honbu' : '';
   if (b.action === 'login' || b.action === 'list') {
     if (!role) return { ok: false, error: '合言葉が違います' };
     return b.action === 'login' ? { ok: true, role: role } : { ok: true, role: role, items: JSON.parse(JSON.stringify(demoData())) };
@@ -720,13 +707,13 @@ function demoApi(b) {
 /* ======== 起動 ======== */
 (function start() {
   if (!GAS_URL) {
-    el('loginView').querySelector('p').innerHTML += '<br><b>デモ表示：</b>何か入力すると法人本部、「rijicho」と入力すると理事長として入れます。';
+    state.key = 'demo'; state.role = 'honbu'; afterLogin(); return;
   }
-  var saved = ''; try { saved = sessionStorage.getItem('kessai_key') || ''; } catch (e) {}
-  if (!saved) { showLogin(); return; }
-  api({ action: 'login', key: saved }).then(function (res) {
-    if (!res.ok) { showLogin(); return; }
-    state.key = saved; state.role = res.role; afterLogin();
+  var token = honbuToken();
+  if (!token) { showLogin(); return; }
+  api({ action: 'login', token: token }).then(function (res) {
+    if (!res.ok) { showLogin(res.error); return; }
+    state.key = token; state.role = res.role; afterLogin();
   }).catch(function () { showLogin('通信できませんでした。時間をおいて再度お試しください。'); });
 })();
 </script>
