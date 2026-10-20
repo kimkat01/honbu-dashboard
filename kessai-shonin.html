@@ -258,6 +258,14 @@
   .seal .s1 { font-size: 10px; }
   .seal .s2 { font-size: 13px; letter-spacing: .02em; max-width: 52px; overflow: hidden; white-space: nowrap; }
   .seal.gray { border-color: #7b8394; color: #5b6478; border-style: double; border-width: 4px; }
+  /* 押した瞬間のハンコ（ポンと押される動き） */
+  .seal.pon { animation: pon .35s ease-out both; }
+  @keyframes pon {
+    0%   { transform: rotate(-6deg) scale(1.9); opacity: 0; }
+    60%  { transform: rotate(-6deg) scale(.92); opacity: 1; }
+    100% { transform: rotate(-6deg) scale(1); opacity: 1; }
+  }
+  .act-saving { font-size: 14px; font-weight: 700; color: var(--ink-soft); margin-top: 10px; }
   .seal-empty { width: 60px; height: 60px; border-radius: 50%; border: 1.5px dashed #B7C4C6; color: var(--d-hint); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; }
   .doc-footer { font-size: 10px; color: var(--d-hint); text-align: right; margin-top: 6px; }
 
@@ -592,17 +600,43 @@ function decide(d) {
   try { localStorage.setItem('kessai_name_' + state.role, name); } catch (e) {}
 
   Array.prototype.forEach.call(el('actBox').querySelectorAll('button'), function (b) { b.disabled = true; });
+
+  // 2026-10-20：保存の完了を待たず、押した瞬間に書類へハンコを押す（保存は裏で続ける）
+  stampNow(it, d, name, cmt);
+
   api({ action: 'decide', key: state.key, appNo: it.appNo, decision: d, name: name, comment: cmt }).then(function (res) {
     if (!res.ok) throw new Error(res.error || '保存できませんでした');
     var idx = state.items.indexOf(it);
     state.items[idx] = res.item;
     renderList();
-    openDetail(res.item);
-    toast(d + 'しました');
+    if (state.current === it) openDetail(res.item);
+    toast(d + 'しました（保存済み）');
   }).catch(function (err) {
-    alert('保存できませんでした：' + err.message);
+    alert('保存できませんでした：' + err.message + '\nハンコは取り消しました。もう一度お試しください。');
     load(false).then(function () { var fresh = find(it.appNo); if (fresh) openDetail(fresh); });
   });
+}
+
+// 押した瞬間の表示：書類のハンコ・状態バッジを先に更新し、操作欄は「保存中」にする
+function stampNow(it, d, name, cmt) {
+  var at = new Date().toISOString();
+  var p = JSON.parse(JSON.stringify(it));
+  var rec = { decision: d, name: name, at: at, comment: cmt };
+  if (state.role === 'honbu') p.honbu = rec; else p.rijicho = rec;
+  p.status = d === '承認' ? (state.role === 'honbu' ? ST.RIJICHO : ST.DONE) : (d === '差戻し' ? ST.BACK : ST.REJECT);
+
+  el('docPage').innerHTML = docHtml(p);
+  var boxes = el('docPage').querySelectorAll('.stamp-box');
+  var box = boxes[state.role === 'honbu' ? 1 : 2];
+  var mine = box && box.querySelector('.seal');
+  if (mine) mine.classList.add('pon');
+  el('dStatus').className = 'badge ' + badgeCls(p.status);
+  el('dStatus').textContent = p.status;
+
+  var note = document.createElement('div');
+  note.className = 'act-saving';
+  note.textContent = '保存しています…（書類は閉じても大丈夫です。ブラウザのタブは閉じないでください）';
+  el('actBox').appendChild(note);
 }
 
 /* ======== A4書類 ======== */
