@@ -196,6 +196,9 @@ td.tot{font-weight:700}
     '園長': ['ホーム','しおどめチャット','伝達くん','有給チェッカー','規約・マニュアル','園長ガイドライン','コーポレートブック','月次収支レポート','決裁申請','採用計画申請書','給食・駐車場','文字起こし','危機管理対応状況']
   };
   var MANAGER_ROLES = ['園長','主任','事務','統括'];
+  /* 2026-10-21：一旦表示しない園（表・人数・明細・「開いていない人」すべてから外す）。
+     戻すときは、この配列から園名を消すだけ */
+  var EXCLUDE_GARDENS = ['しおどめ保育園小規模認可'];
 
   /* ===== データ ===== */
   var EVENTS = [];   // {t:Date, dash, garden, id, name, role, tool, pk}
@@ -217,6 +220,7 @@ td.tot{font-weight:700}
     return s.replace('認定こども園', '').replace('ふれあいしおどめ保育園', 'ふれあい').replace('しおどめなかよし保育園', 'なかよし').replace('保育園', '') || s;
   }
   function isHonbu(garden, id, role){ return role === '本部' || garden === '本部' || /^9\d{3}$/.test(String(id)); }
+  function isExcluded(garden){ var g = squash(garden); return EXCLUDE_GARDENS.some(function(x){ return squash(x) === g; }); }
   function isManager(role){ return MANAGER_ROLES.indexOf(role) >= 0; }
 
   function build(data){
@@ -226,6 +230,7 @@ td.tot{font-weight:700}
     (data.roster || []).forEach(function(r){
       var garden = r[0], id = String(r[1]), name = r[2], role = r[3] || '職員';
       if(isHonbu(garden, id, role)) return;
+      if(isExcluded(garden)) return;
       var pk = garden + '|' + id;
       roleOf[pk] = role;
       PEOPLE.push({ pk:pk, garden:garden, id:id, name:name, role:role });
@@ -236,6 +241,7 @@ td.tot{font-weight:700}
       var pk = garden + '|' + id;
       var role = roleOf[pk] || r[5] || (r[1] === '園長' ? '園長' : '職員');
       if(isHonbu(garden, id, role)) return;
+      if(isExcluded(garden)) return;
       if(new Date(r[0]) < START_DATE) return;   // 記録開始より前（テスト分など）は数えない
       EVENTS.push({ t:new Date(r[0]), dash:r[1], garden:garden, id:id, name:r[4], role:role, tool:r[6], pk:pk });
     });
