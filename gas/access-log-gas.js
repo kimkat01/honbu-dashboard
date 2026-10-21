@@ -14,6 +14,10 @@
      画面の「最新にする」（fresh=1）のときだけ、その場でシートを読み直す。
      職員名簿は変更が少ないので6時間使い回す。
      ※ このコードに貼り替えたら、setup をもう一度実行して予約を登録し直すこと
+   ・2026-10-21：H列「操作」を追加（閲覧／投稿）。
+     ツールを開いたときは「閲覧」、ご意見箱の送信・決裁申請・チャット送信などは「投稿」と記録する。
+     それより前の行（H列が空）は「閲覧」として扱う。
+     ※ 貼り替えたら setup を1回実行（ログのH1に「操作」の見出しが入ります）→ デプロイを「新バージョン」で更新
    ============================================================ */
 
 var LOGIN_MASTER_ID = '1KYQJl14dvvWPM02xMzNye5hFFWiFU_uus-MVH3E-LNY'; // PINマスタ_テンプレート
@@ -24,7 +28,8 @@ var ARCHIVE_SHEET   = 'ログ_過去分';
 var KEEP_DAYS       = 180;   // これより古い記録は月1回「ログ_過去分」へ移す
 var MAX_VIEW_DAYS   = 90;    // 画面に渡す最大日数
 var DASHES          = ['職員', '園長'];
-var HEADER          = ['日時', 'ダッシュボード', '園名', 'ログインID', '名前', '権限', 'ツール'];
+var HEADER          = ['日時', 'ダッシュボード', '園名', 'ログインID', '名前', '権限', 'ツール', '操作'];
+var ACTS            = ['閲覧', '投稿'];
 
 var VIEW_CACHE_SEC   = 600;     // 作り置きの有効時間（予約で5分ごとに作り直す）
 var ROSTER_CACHE_SEC = 21600;   // 職員名簿の使い回し時間（6時間）
@@ -56,6 +61,9 @@ function prepareSheet_(ss, name) {
     sh.getRange(1, 1, 1, HEADER.length).setFontWeight('bold');
     sh.getRange('A:A').setNumberFormat('yyyy/mm/dd hh:mm:ss');
     sh.getRange('D:D').setNumberFormat('@');
+  } else if (sh.getRange(1, HEADER.length).getValue() === '') {
+    // 2026-10-21：前からあるシートに「操作」の見出しを足す
+    sh.getRange(1, HEADER.length).setValue(HEADER[HEADER.length - 1]).setFontWeight('bold');
   }
   return sh;
 }
@@ -69,7 +77,8 @@ function doPost(e) {
     var tool = clip_(d.tool, 40);
     var loginId = clip_(d.loginId, 20);
     if (DASHES.indexOf(dash) < 0 || !tool || !loginId) return text_('ng');
-    var row = [new Date(), dash, clip_(d.garden, 40), loginId, clip_(d.name, 40), clip_(d.role, 20), tool];
+    var act = ACTS.indexOf(String(d.act || '')) >= 0 ? String(d.act) : '閲覧';
+    var row = [new Date(), dash, clip_(d.garden, 40), loginId, clip_(d.name, 40), clip_(d.role, 20), tool, act];
     var lock = LockService.getScriptLock();
     lock.waitLock(10000);
     try {
@@ -111,7 +120,7 @@ function buildPayload_(days, freshRoster) {
       var t = r[0] instanceof Date ? r[0].getTime() : new Date(r[0]).getTime();
       if (!t) continue;
       if (t < since) break;
-      events.push([t, String(r[1]), String(r[2]), String(r[3]), String(r[4]), String(r[5]), String(r[6])]);
+      events.push([t, String(r[1]), String(r[2]), String(r[3]), String(r[4]), String(r[5]), String(r[6]), String(r[7] || '閲覧')]);
     }
   }
   return { ok: true, now: Date.now(), days: days, events: events, roster: getRoster_(freshRoster) };

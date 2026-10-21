@@ -10,6 +10,11 @@
   ・園長ダッシュボード／職員ダッシュボードで「誰が・いつ・どのツールを開いたか」を一覧で見る画面
   ・データは GAS「アクセスログ」（cryk0289、スプレッドシート「アクセスログ」に紐付き）から読む
   ・職員名簿（開いていない人の判定）は、GASが「PINマスタ_テンプレート」のログインマスタから渡す
+  ・2026-10-21：
+    ① 園×ツール表のマスをクリックすると、その園・ツールの明細だけに絞り込み、明細の位置まで移動する
+       （明細の上に「絞り込み中」の札が出て、✕で解除できる）
+    ② 「閲覧」と「投稿」を分けて表示する。表の数字は閲覧回数、右下の ✎ は投稿回数。
+       明細に「操作」の列（閲覧／投稿）を追加。絞り込みに「操作」を追加
 -->
 <script>
   // 本部ダッシュボードと同じテーマ（ダーク／ライト）で開く
@@ -24,6 +29,7 @@
   --accent:#3a63d8; --accent-soft:#e6ecfc; --accent-ink:#ffffff;
   --heat0:#f4f6fb; --heat1:#dfe7fb; --heat2:#b9cbf5; --heat3:#7f9eec; --heat4:#3a63d8;
   --warn:#a3570b; --warn-soft:#fdf1e3; --err:#b42318;
+  --post:#b8480f; --post-soft:#fdf0e6;
   --font-body:"BIZ UDPGothic","Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,sans-serif;
   --font-num:"IBM Plex Mono",ui-monospace,Consolas,monospace;
 }
@@ -32,6 +38,7 @@
   --accent:#6f93f5; --accent-soft:#232c48; --accent-ink:#0d1220;
   --heat0:#141a28; --heat1:#1f2a4a; --heat2:#2b3d72; --heat3:#4560b4; --heat4:#6f93f5;
   --warn:#f0a35c; --warn-soft:#3a2a18; --err:#ff8a80; color-scheme:dark;
+  --post:#ffb27a; --post-soft:#3a2618;
 }
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--font-body);font-size:15px;line-height:1.6;
@@ -91,6 +98,18 @@ td.cell{cursor:pointer;border-radius:4px;min-width:44px}
 td.cell.zero{color:var(--muted)}
 td.cell.sel{outline:2px solid var(--fg);outline-offset:-2px}
 td.tot{font-weight:700}
+/* 投稿回数（✎n）：閲覧回数の右下に小さく出す */
+.pc{display:block;font-size:10.5px;line-height:1.1;font-weight:700;color:var(--post)}
+td.cell.strong .pc{color:var(--accent-ink)}
+.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:12px;color:var(--muted)}
+.legend b{color:var(--post)}
+.act{font-size:12px;border-radius:4px;padding:1px 8px;border:1px solid var(--line);color:var(--muted);white-space:nowrap}
+.act.post{border-color:var(--post);background:var(--post-soft);color:var(--post);font-weight:700}
+.log tbody tr.is-post{background:var(--post-soft)}
+.chip{display:inline-flex;align-items:center;gap:8px;font-size:13px;border:1px solid var(--accent);background:var(--accent-soft);color:var(--fg);border-radius:999px;padding:3px 4px 3px 12px}
+.chip button{font:inherit;font-size:13px;border:0;background:var(--accent);color:var(--accent-ink);border-radius:999px;min-width:26px;height:26px;cursor:pointer;padding:0 8px}
+.loghead{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
+.loghead .l{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
 
 .notyet{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;max-height:560px;overflow:auto}
 .notyet li{display:flex;justify-content:space-between;gap:10px;padding:7px 2px;border-bottom:1px solid var(--line);font-size:14px}
@@ -137,6 +156,9 @@ td.tot{font-weight:700}
       </div>
       <div class="field"><label for="fGarden">園</label><select id="fGarden"></select></div>
       <div class="field"><label for="fTool">ツール</label><select id="fTool"></select></div>
+      <div class="field"><label for="fAct">操作</label>
+        <select id="fAct"><option value="">すべて</option><option value="閲覧">閲覧（開いた）</option><option value="投稿">投稿（送信・申請・書き込み）</option></select>
+      </div>
       <div class="field"><label for="fName">名前で探す</label><input type="search" id="fName" placeholder="例：佐藤"></div>
       <button class="reset" id="reset" type="button">条件をクリア</button>
     </div>
@@ -152,7 +174,8 @@ td.tot{font-weight:700}
   <div class="grid2">
     <section class="panel">
       <h2>園 × ツール　閲覧回数</h2>
-      <p class="hint">マスをクリックすると、その園・ツールの明細に絞り込みます。もう一度クリックで解除します。園が多いときは表を横にスクロールできます（園名の行とツール名の列は固定）。</p>
+      <p class="hint">マスをクリックすると、その園・ツールの明細だけに絞り込みます（下の「明細」へ移動します）。もう一度クリックで解除します。園が多いときは表を横にスクロールできます（園名の行とツール名の列は固定）。</p>
+      <div class="legend"><span>大きい数字＝<b style="color:var(--fg)">閲覧</b>（開いた回数）</span><span><b>✎2</b>＝<b>投稿</b>（送信・申請・書き込みをした回数）</span><span>※投稿の記録は 10/21 から</span></div>
       <div class="scroll mx"><table class="matrix" id="matrix"></table></div>
     </section>
     <section class="panel">
@@ -163,12 +186,12 @@ td.tot{font-weight:700}
   </div>
 
   <section class="panel">
-    <div class="row" style="justify-content:space-between;align-items:baseline">
-      <h2>閲覧の明細</h2><span class="count" id="logCount"></span>
+    <div class="loghead" id="logHead">
+      <div class="l"><h2>明細（閲覧・投稿）</h2><span id="chip"></span></div><span class="count" id="logCount"></span>
     </div>
     <div class="scroll">
       <table class="log">
-        <thead><tr><th>日時</th><th>園</th><th>名前</th><th>権限</th><th>ダッシュボード</th><th>ツール</th></tr></thead>
+        <thead><tr><th>日時</th><th>園</th><th>名前</th><th>権限</th><th>ダッシュボード</th><th>ツール</th><th>操作</th></tr></thead>
         <tbody id="logBody"></tbody>
       </table>
     </div>
@@ -243,7 +266,7 @@ td.tot{font-weight:700}
       if(isHonbu(garden, id, role)) return;
       if(isExcluded(garden)) return;
       if(new Date(r[0]) < START_DATE) return;   // 記録開始より前（テスト分など）は数えない
-      EVENTS.push({ t:new Date(r[0]), dash:r[1], garden:garden, id:id, name:r[4], role:role, tool:r[6], pk:pk });
+      EVENTS.push({ t:new Date(r[0]), dash:r[1], garden:garden, id:id, name:r[4], role:role, tool:r[6], act:(r[7] === '投稿' ? '投稿' : '閲覧'), pk:pk });
     });
     EVENTS.sort(function(a, b){ return b.t - a.t; });
 
@@ -274,7 +297,7 @@ td.tot{font-weight:700}
   }
 
   /* ===== 画面 ===== */
-  var state = { days:1, dash:'', garden:'', tool:'', name:'', limit:100 };
+  var state = { days:1, dash:'', garden:'', tool:'', act:'', name:'', limit:100 };
 
   function buildToolSelect(){
     var groups = state.dash ? [state.dash] : ['職員','園長'];
@@ -292,6 +315,7 @@ td.tot{font-weight:700}
     if(state.dash && e.dash !== state.dash) return false;
     if(!ignoreGT && state.garden && e.garden !== state.garden) return false;
     if(!ignoreGT && state.tool && (e.dash + '|' + e.tool) !== state.tool) return false;
+    if(!ignoreGT && state.act && e.act !== state.act) return false;
     return nameHit(e.name);
   }
   function periodText(){ return state.days === 1 ? '今日' : clipped() ? '記録開始（' + START_LABEL + '）から' : '直近' + state.days + '日間'; }
@@ -300,8 +324,9 @@ td.tot{font-weight:700}
     var rows = EVENTS.filter(function(e){ return match(e); });
 
     // 要約
-    $('sViews').textContent = rows.length.toLocaleString();
-    $('sViewsSub').textContent = periodText();
+    var nPost = rows.filter(function(e){ return e.act === '投稿'; }).length;
+    $('sViews').textContent = (rows.length - nPost).toLocaleString();
+    $('sViewsSub').textContent = periodText() + '・投稿 ' + nPost + '回';
     var uniq = {};
     rows.forEach(function(e){ uniq[e.pk] = 1; });
     var managerOnly = state.dash === '園長' || (state.tool && state.tool.indexOf('園長|') === 0);
@@ -314,15 +339,15 @@ td.tot{font-weight:700}
     $('sNot').textContent = not.length;
     $('sNotSub').textContent = state.tool ? state.tool.split('|')[1] + ' を' : 'どのツールも';
     var tc = {};
-    rows.forEach(function(e){ if(e.tool === 'ホーム') return; var k = e.dash + '|' + e.tool; tc[k] = (tc[k] || 0) + 1; });
+    rows.forEach(function(e){ if(e.tool === 'ホーム' || e.act === '投稿') return; var k = e.dash + '|' + e.tool; tc[k] = (tc[k] || 0) + 1; });
     var top = Object.keys(tc).map(function(k){ return [k, tc[k]]; }).sort(function(a, b){ return b[1] - a[1]; })[0];
     $('sTop').textContent = top ? top[0].split('|')[1] : '—';
     $('sTopSub').textContent = top ? top[0].split('|')[0] + 'ダッシュボード・' + top[1] + '回（ホームを除く）' : '';
 
     // 園×ツール表
     var base = EVENTS.filter(function(e){ return match(e, true); });
-    var cnt = {};
-    base.forEach(function(e){ var k = e.dash + '|' + e.tool + '|' + e.garden; cnt[k] = (cnt[k] || 0) + 1; });
+    var cnt = {}, pcnt = {};   // cnt＝閲覧回数、pcnt＝投稿回数
+    base.forEach(function(e){ var k = e.dash + '|' + e.tool + '|' + e.garden; if(e.act === '投稿') pcnt[k] = (pcnt[k] || 0) + 1; else cnt[k] = (cnt[k] || 0) + 1; });
     var max = 1;
     Object.keys(cnt).forEach(function(k){ if(k.split('|')[1] !== 'ホーム' && cnt[k] > max) max = cnt[k]; });
     var heat = function(v){ return v === 0 ? 'var(--heat0)' : 'var(--heat' + Math.min(4, 1 + Math.floor(Math.min(v, max) / max * 3.999)) + ')'; };
@@ -331,15 +356,16 @@ td.tot{font-weight:700}
     groups.forEach(function(g){
       h += '<tr class="grp"><th colspan="' + (GARDENS.length + 2) + '"><span>' + g + 'ダッシュボード</span></th></tr>';
       TOOLS[g].forEach(function(t){
-        var sum = 0;
+        var sum = 0, psum = 0;
         h += '<tr><th>' + esc(t) + '</th>';
         GARDENS.forEach(function(s){
-          var v = cnt[g + '|' + t + '|' + s] || 0; sum += v;
+          var key = g + '|' + t + '|' + s;
+          var v = cnt[key] || 0, pv = pcnt[key] || 0; sum += v; psum += pv;
           var sel = state.tool === g + '|' + t && state.garden === s;
           var strong = v > max * 0.6;
-          h += '<td class="cell num' + (v ? '' : ' zero') + (sel ? ' sel' : '') + '" tabindex="0" data-k="' + esc(g + '|' + t) + '" data-g="' + esc(s) + '" style="background:' + heat(v) + ';' + (strong ? 'color:var(--accent-ink)' : '') + '" title="' + esc(s + '・' + t + '：' + v + '回') + '">' + v + '</td>';
+          h += '<td class="cell num' + (v || pv ? '' : ' zero') + (sel ? ' sel' : '') + (strong ? ' strong' : '') + '" tabindex="0" data-k="' + esc(g + '|' + t) + '" data-g="' + esc(s) + '" style="background:' + heat(v) + ';' + (strong ? 'color:var(--accent-ink)' : '') + '" title="' + esc(s + '・' + t + '：閲覧 ' + v + '回／投稿 ' + pv + '回（クリックで明細に絞り込み）') + '">' + v + (pv ? '<span class="pc">✎' + pv + '</span>' : '') + '</td>';
         });
-        h += '<td class="tot num">' + sum + '</td></tr>';
+        h += '<td class="tot num">' + sum + (psum ? '<span class="pc">✎' + psum + '</span>' : '') + '</td></tr>';
       });
     });
     $('matrix').innerHTML = h + '</tbody>';
@@ -364,17 +390,27 @@ td.tot{font-weight:700}
       : '<li class="empty">全員が開いています。</li>';
 
     // 明細
+    // 絞り込み中の札（園×ツール表のマスから来たとき・操作で絞ったとき）
+    var chips = [];
+    if(state.garden || state.tool){
+      chips.push('<span class="chip">絞り込み中：' + esc([state.garden ? shortName(state.garden) : '', state.tool ? state.tool.split('|')[1] : ''].filter(Boolean).join(' × ')) +
+                 '<button type="button" id="chipClear" aria-label="絞り込みを解除">✕</button></span>');
+    }
+    if(state.act) chips.push('<span class="chip">' + esc(state.act) + 'のみ<button type="button" id="chipAct" aria-label="操作の絞り込みを解除">✕</button></span>');
+    $('chip').innerHTML = chips.join(' ');
     $('logCount').textContent = rows.length.toLocaleString() + '件中 ' + Math.min(rows.length, state.limit) + '件を表示（新しい順）';
     $('logBody').innerHTML = rows.slice(0, state.limit).map(function(e){
-      return '<tr><td class="num">' + fmt(e.t) + '</td><td>' + esc(e.garden) + '</td><td><button class="namebtn" type="button" data-name="' + esc(e.name) + '">' + esc(e.name) + '</button></td>' +
-             '<td class="role">' + esc(e.role) + '</td><td><span class="tag' + (e.dash === '園長' ? ' encho' : '') + '">' + esc(e.dash) + '</span></td><td>' + esc(e.tool) + '</td></tr>';
-    }).join('') || '<tr><td colspan="6" class="empty">この条件の閲覧はありません。</td></tr>';
+      var post = e.act === '投稿';
+      return '<tr' + (post ? ' class="is-post"' : '') + '><td class="num">' + fmt(e.t) + '</td><td>' + esc(e.garden) + '</td><td><button class="namebtn" type="button" data-name="' + esc(e.name) + '">' + esc(e.name) + '</button></td>' +
+             '<td class="role">' + esc(e.role) + '</td><td><span class="tag' + (e.dash === '園長' ? ' encho' : '') + '">' + esc(e.dash) + '</span></td><td>' + esc(e.tool) + '</td>' +
+             '<td><span class="act' + (post ? ' post' : '') + '">' + (post ? '✎ 投稿' : '閲覧') + '</span></td></tr>';
+    }).join('') || '<tr><td colspan="7" class="empty">この条件の記録はありません。</td></tr>';
     $('more').hidden = rows.length <= state.limit;
 
     Array.prototype.forEach.call(document.querySelectorAll('#period button'), function(b){ b.setAttribute('aria-pressed', String(+b.getAttribute('data-d') === state.days)); });
   }
 
-  function syncInputs(){ $('fDash').value = state.dash; $('fGarden').value = state.garden; $('fTool').value = state.tool; $('fName').value = state.name; }
+  function syncInputs(){ $('fDash').value = state.dash; $('fGarden').value = state.garden; $('fTool').value = state.tool; $('fAct').value = state.act; $('fName').value = state.name; }
   function set(patch){
     for(var k in patch) state[k] = patch[k];
     state.limit = 100;
@@ -387,13 +423,20 @@ td.tot{font-weight:700}
   $('fDash').addEventListener('change', function(e){ set({ dash: e.target.value }); });
   $('fGarden').addEventListener('change', function(e){ set({ garden: e.target.value }); });
   $('fTool').addEventListener('change', function(e){ set({ tool: e.target.value }); });
+  $('fAct').addEventListener('change', function(e){ set({ act: e.target.value }); });
   $('fName').addEventListener('input', function(e){ set({ name: e.target.value.trim() }); });
-  $('reset').addEventListener('click', function(){ state.dash = ''; buildToolSelect(); set({ days:1, dash:'', garden:'', tool:'', name:'' }); });
+  $('reset').addEventListener('click', function(){ state.dash = ''; buildToolSelect(); set({ days:1, dash:'', garden:'', tool:'', act:'', name:'' }); });
   function cellPick(td){
     var k = td.getAttribute('data-k'), g = td.getAttribute('data-g');
     var same = state.tool === k && state.garden === g;
     set(same ? { tool:'', garden:'' } : { tool:k, garden:g });
+    // 絞り込んだら明細の位置まで移動する（解除のときは動かさない）
+    if(!same){ try{ $('logHead').scrollIntoView({ behavior:'smooth', block:'start' }); }catch(e){ $('logHead').scrollIntoView(); } }
   }
+  $('chip').addEventListener('click', function(e){
+    if(e.target.id === 'chipClear') set({ tool:'', garden:'' });
+    else if(e.target.id === 'chipAct') set({ act:'' });
+  });
   $('matrix').addEventListener('click', function(e){ var td = e.target.closest('td.cell'); if(td) cellPick(td); });
   $('matrix').addEventListener('keydown', function(e){ var td = e.target.closest('td.cell'); if(td && (e.key === 'Enter' || e.key === ' ')){ e.preventDefault(); cellPick(td); } });
   $('logBody').addEventListener('click', function(e){ var b = e.target.closest('.namebtn'); if(b) set({ name: squash(b.getAttribute('data-name')) }); });
