@@ -389,6 +389,72 @@
   .card .cam-select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   .card .cam-select option { color: #000; background: #fff; font-weight: 400; }
 
+  /* 職員ダッシュボードカード（2026-10-22）：右上に「スマホ版」、下段に「園」プルダウン（全幅・園名を省略しない） */
+  .card .sd-phone-btn {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    z-index: 2;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 5px 14px;
+    border-radius: 999px;
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1.4;
+    color: #fff;
+    text-decoration: none;
+    background: linear-gradient(135deg, #2f9e5b, #4fc47e);
+    transition: transform 0.12s ease, filter 0.12s ease;
+  }
+  .card .sd-phone-btn:hover { transform: translateY(-1px); filter: brightness(1.1); }
+  .card .sd-phone-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .card .sd-pick {
+    margin-top: auto;
+    display: flex;
+    align-items: stretch;
+    border: 1px solid var(--panel-border);
+    border-radius: 9px;
+    overflow: hidden;
+    background: rgba(255, 255, 255, 0.08);
+    cursor: pointer;
+  }
+  :root[data-theme="light"] .card .sd-pick { background: #eef1f7; border-color: #d3d8e6; }
+  .card .sd-pick:hover { border-color: var(--accent); }
+  .card .sd-pick:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .card .sd-pick-label {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    padding: 0 7px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #fff;
+    background: #2f9e5b;
+  }
+  .card .sd-select {
+    flex: 1;
+    min-width: 0;
+    appearance: none;
+    -webkit-appearance: none;
+    font: inherit;
+    font-size: 12.5px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: var(--ink);
+    background: transparent url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23888'/%3E%3C/svg%3E") no-repeat right 8px center;
+    border: 0;
+    padding: 6px 22px 6px 8px;
+    cursor: pointer;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    overflow: hidden;
+  }
+  .card .sd-select:focus { outline: none; }
+  .card .sd-select option { color: #000; background: #fff; font-weight: 400; }
+  .card .sd-select optgroup { color: #555; background: #fff; font-style: normal; font-weight: 700; }
+
   footer {
     text-align: center;
     font-size: 10.5px;
@@ -720,20 +786,17 @@
       </a>
 
       <!-- 職員ダッシュボード（2026-10、旧「危機管理対応状況」の場所）：園を選んで、その園の職員ダッシュボードを本部閲覧モードで開く
-           ・「別タブ」＝新しいタブで開く／「スマホで見る」＝このページの上にスマホ枠で表示
+           ・右上「スマホ版」＝このページの上にスマホ枠で表示（2026-10-22：別タブボタンは廃止）
+           ・下の「園」プルダウンで表示する園を選ぶ（園名は省略せず全文表示）
            ・本部閲覧モード（?view=honbu）はログイン不要・記録や送信は行わない（仕組みは staff-dashboard/index.html 側） -->
       <div class="card card-split" id="sdCard">
+        <a class="sd-phone-btn" id="sdOpenPhone" href="#" role="button">📱 スマホ版</a>
         <div class="icon c-green">📱</div>
         <div class="title">職員ダッシュボード</div>
-        <div class="cam-selects">
-          <select class="cam-select" id="sdGarden" aria-label="職員ダッシュボード：園を選ぶ"></select>
-        </div>
-        <div class="stat-row">
-          <div class="stat-actions">
-            <a class="sheet-btn" id="sdOpenTab" href="#" target="_blank" rel="noopener">↗ 別タブ</a>
-            <a class="sheet-btn" id="sdOpenPhone" href="#" role="button">📱 スマホで見る</a>
-          </div>
-        </div>
+        <label class="sd-pick" for="sdGarden">
+          <span class="sd-pick-label">園</span>
+          <select class="sd-select" id="sdGarden" aria-label="職員ダッシュボード：表示する園を選ぶ"></select>
+        </label>
       </div>
 
       <!-- 利用状況（2026-10）：園長・職員ダッシュボードで「誰が・いつ・どのツールを開いたか」の一覧（このリポジトリの riyo-jokyo.html）
@@ -751,11 +814,10 @@
 
 <footer>しおどめグループ 本部ダッシュボード</footer>
 
-<!-- 職員ダッシュボードをスマホ枠で表示（「職員ダッシュボード」カードの「スマホで見る」から開く） -->
+<!-- 職員ダッシュボードをスマホ枠で表示（「職員ダッシュボード」カードの「スマホ版」から開く） -->
 <div id="sdPhone" role="dialog" aria-modal="true" aria-label="職員ダッシュボード（スマホ表示）">
   <div class="ph-bar">
     <select id="sdPhoneGarden" aria-label="表示する園"></select>
-    <a class="ph-btn" id="sdPhoneTab" href="#" target="_blank" rel="noopener">↗ 別タブ</a>
     <button class="ph-btn" id="sdPhoneClose" type="button">✕ 閉じる</button>
   </div>
   <div class="ph-frame"><iframe id="sdPhoneFrame" title="職員ダッシュボード" src="about:blank"></iframe></div>
@@ -1077,15 +1139,13 @@ document.querySelectorAll('.cam-select[data-cam]').forEach(function (sel) {
   function urlFor(key) { return (SPECIAL_URL[key] || BASE) + '?garden=' + encodeURIComponent(key) + '&view=honbu'; }
 
   var sel = document.getElementById('sdGarden');
-  var tab = document.getElementById('sdOpenTab');
   var phoneBtn = document.getElementById('sdOpenPhone');
   var modal = document.getElementById('sdPhone');
   var mSel = document.getElementById('sdPhoneGarden');
-  var mTab = document.getElementById('sdPhoneTab');
   var frame = document.getElementById('sdPhoneFrame');
 
   function buildOptions(select) {
-    var groups = [['学校法人柴学園', /^S/], ['社会福祉法人雄雅会', /^Y/]];
+    var groups = [['学法｜学校法人柴学園', /^S/], ['社福｜社会福祉法人雄雅会', /^Y/]];
     select.innerHTML = groups.map(function (gr) {
       return '<optgroup label="' + gr[0] + '">' + gardens.filter(function (g) { return gr[1].test(g.code); })
         .map(function (g) { return '<option value="' + g.key + '">' + g.name + '</option>'; }).join('') + '</optgroup>';
@@ -1102,8 +1162,6 @@ document.querySelectorAll('.cam-select[data-cam]').forEach(function (sel) {
     if (!key) return;
     sel.value = key;
     mSel.value = key;
-    tab.href = urlFor(key);
-    mTab.href = urlFor(key);
     try { localStorage.setItem(LAST_KEY, key); } catch (e) {}
     if (reloadFrame) frame.src = urlFor(key);
   }
