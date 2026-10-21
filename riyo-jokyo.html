@@ -302,7 +302,9 @@ td.cell.strong .pc{color:var(--accent-ink)}
   }
 
   /* ===== 画面 ===== */
-  var state = { days:1, dash:'', garden:'', tool:'', act:'', name:'', limit:100 };
+  /* 2026-10-21：明細は最初から全件表示（以前は新しい100件だけ） */
+  var LOG_LIMIT = Infinity;
+  var state = { days:1, dash:'', garden:'', tool:'', act:'', name:'', limit:LOG_LIMIT };
 
   function buildToolSelect(){
     var groups = state.dash ? [state.dash] : ['職員','園長'];
@@ -403,7 +405,8 @@ td.cell.strong .pc{color:var(--accent-ink)}
     }
     if(state.act) chips.push('<span class="chip">' + esc(state.act) + 'のみ<button type="button" id="chipAct" aria-label="操作の絞り込みを解除">✕</button></span>');
     $('chip').innerHTML = chips.join(' ');
-    $('logCount').textContent = rows.length.toLocaleString() + '件中 ' + Math.min(rows.length, state.limit) + '件を表示（新しい順）';
+    $('logCount').textContent = rows.length <= state.limit ? '全' + rows.length.toLocaleString() + '件（新しい順）'
+      : rows.length.toLocaleString() + '件中 ' + Math.min(rows.length, state.limit) + '件を表示（新しい順）';
     $('logBody').innerHTML = rows.slice(0, state.limit).map(function(e){
       var post = e.act === '投稿';
       return '<tr' + (post ? ' class="is-post"' : '') + '><td class="num">' + fmt(e.t) + '</td><td>' + esc(e.garden) + '</td><td><button class="namebtn" type="button" data-name="' + esc(e.name) + '">' + esc(e.name) + '</button></td>' +
@@ -418,7 +421,7 @@ td.cell.strong .pc{color:var(--accent-ink)}
   function syncInputs(){ $('fDash').value = state.dash; $('fGarden').value = state.garden; $('fTool').value = state.tool; $('fAct').value = state.act; $('fName').value = state.name; }
   function set(patch){
     for(var k in patch) state[k] = patch[k];
-    state.limit = 100;
+    state.limit = LOG_LIMIT;
     if('dash' in patch) buildToolSelect();
     syncInputs();
     render();
