@@ -29,7 +29,8 @@
   --accent:#3a63d8; --accent-soft:#e6ecfc; --accent-ink:#ffffff;
   --heat0:#f4f6fb; --heat1:#dfe7fb; --heat2:#b9cbf5; --heat3:#7f9eec; --heat4:#3a63d8;
   --warn:#a3570b; --warn-soft:#fdf1e3; --err:#b42318;
-  --post:#b8480f; --post-soft:#fdf0e6;
+  --post:#c2410c; --post-soft:#fde7d6; --post-ink:#ffffff;
+  --view-bg:#e6ecfc; --view-ink:#2848a8; --view-line:#c3d1f5;
   --font-body:"BIZ UDPGothic","Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,sans-serif;
   --font-num:"IBM Plex Mono",ui-monospace,Consolas,monospace;
 }
@@ -38,7 +39,8 @@
   --accent:#6f93f5; --accent-soft:#232c48; --accent-ink:#0d1220;
   --heat0:#141a28; --heat1:#1f2a4a; --heat2:#2b3d72; --heat3:#4560b4; --heat4:#6f93f5;
   --warn:#f0a35c; --warn-soft:#3a2a18; --err:#ff8a80; color-scheme:dark;
-  --post:#ffb27a; --post-soft:#3a2618;
+  --post:#ff9a52; --post-soft:#3d2414; --post-ink:#1a0d04;
+  --view-bg:#232c48; --view-ink:#b9cbf5; --view-line:#34406a;
 }
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--font-body);font-size:15px;line-height:1.6;
@@ -103,9 +105,12 @@ td.tot{font-weight:700}
 td.cell.strong .pc{color:var(--accent-ink)}
 .legend{display:flex;flex-wrap:wrap;gap:14px;font-size:12px;color:var(--muted)}
 .legend b{color:var(--post)}
-.act{font-size:12px;border-radius:4px;padding:1px 8px;border:1px solid var(--line);color:var(--muted);white-space:nowrap}
-.act.post{border-color:var(--post);background:var(--post-soft);color:var(--post);font-weight:700}
+.act{display:inline-flex;align-items:center;gap:5px;font-size:14px;font-weight:700;line-height:1;border-radius:999px;padding:6px 14px;white-space:nowrap;
+  background:var(--view-bg);color:var(--view-ink);border:1px solid var(--view-line)}
+.act.post{background:var(--post);color:var(--post-ink);border-color:var(--post);box-shadow:0 0 0 2px var(--post-soft)}
 .log tbody tr.is-post{background:var(--post-soft)}
+.log tbody tr.is-post td:first-child{box-shadow:inset 4px 0 0 var(--post)}
+.log tbody tr.is-post td{font-weight:700}
 .chip{display:inline-flex;align-items:center;gap:8px;font-size:13px;border:1px solid var(--accent);background:var(--accent-soft);color:var(--fg);border-radius:999px;padding:3px 4px 3px 12px}
 .chip button{font:inherit;font-size:13px;border:0;background:var(--accent);color:var(--accent-ink);border-radius:999px;min-width:26px;height:26px;cursor:pointer;padding:0 8px}
 .loghead{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
@@ -403,7 +408,7 @@ td.cell.strong .pc{color:var(--accent-ink)}
       var post = e.act === '投稿';
       return '<tr' + (post ? ' class="is-post"' : '') + '><td class="num">' + fmt(e.t) + '</td><td>' + esc(e.garden) + '</td><td><button class="namebtn" type="button" data-name="' + esc(e.name) + '">' + esc(e.name) + '</button></td>' +
              '<td class="role">' + esc(e.role) + '</td><td><span class="tag' + (e.dash === '園長' ? ' encho' : '') + '">' + esc(e.dash) + '</span></td><td>' + esc(e.tool) + '</td>' +
-             '<td><span class="act' + (post ? ' post' : '') + '">' + (post ? '✎ 投稿' : '閲覧') + '</span></td></tr>';
+             '<td><span class="act' + (post ? ' post' : '') + '">' + (post ? '✎ 投稿' : '👁 閲覧') + '</span></td></tr>';
     }).join('') || '<tr><td colspan="7" class="empty">この条件の記録はありません。</td></tr>';
     $('more').hidden = rows.length <= state.limit;
 
