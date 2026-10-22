@@ -853,7 +853,9 @@
       logoutBtn.classList.toggle('hidden', !withAuth);
       // 職員ダッシュボードの「本部閲覧モード」用の目印（同じ kimkat01.github.io なので職員ダッシュボード側から読める。7日間有効）
       try { localStorage.setItem('sd_honbu_viewer', String(Date.now())); } catch (e) {}
-      document.dispatchEvent(new Event('honbu:unlocked'));
+      // 件数の取得などは後ろの<script>で待ち受けているので、ページを読み終えてから知らせる
+      if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { document.dispatchEvent(new Event('honbu:unlocked')); });
+      else document.dispatchEvent(new Event('honbu:unlocked'));
       // 決裁承認などから「ログインしてから戻る」で来たときは、元の画面へ戻す（同じフォルダ内のページだけ）
       if (withAuth) {
         var next = new URLSearchParams(location.search).get('next') || '';
@@ -933,19 +935,25 @@
       lock();
     });
 
-    // 開いたとき：保存済みの通行証が使えるかGASに確認
-    step('gate-loading');
+    /* 開いたとき（2026-10-22 高速化）
+       以前は、GASの確認（数秒〜十数秒かかる）が終わるまで「確認中」の画面で待っていた。
+       ・通行証（12時間有効）がこのPCに残っていれば、すぐにダッシュボードを開き、確認は裏で行う。
+         裏の確認で無効と分かったときだけ、ログイン画面に戻す
+       ・通行証が無ければ、すぐにログイン画面を出す（GASの返事を待たない） */
     var t = getToken();
+    if (t) unlock(true);
+    else step('gate-step1');
     fetch(AUTH_URL + '?action=verify&token=' + encodeURIComponent(t) + '&t=' + Date.now())
       .then(function (r) { return r.json(); })
       .then(function (res) {
-        if (!res || !res.authVersion) { unlock(false); return; }   // GASが旧版＝2段階認証はまだ無効
-        if (res.ok) unlock(true);
-        else { clearToken(); step('gate-step1'); }
+        if (!res || !res.authVersion) { if (!unlocked) unlock(false); return; }   // GASが旧版＝2段階認証はまだ無効
+        if (res.ok) { if (!unlocked) unlock(true); return; }
+        clearToken();
+        if (unlocked) { lock(); err.textContent = 'ログインの有効期限が切れました。もう一度ログインしてください。'; }
       })
       .catch(function () {
-        step('gate-step1');
-        err.textContent = 'ログイン確認に接続できませんでした。時間をおいて再読み込みしてください。';
+        // 通信できなかったときは、開いている画面はそのまま（件数の取得で改めてエラーが出る）
+        if (!unlocked) err.textContent = 'ログイン確認に接続できませんでした。時間をおいて再読み込みしてください。';
       });
   })();
 
@@ -1021,21 +1029,41 @@
       show(c, counts === undefined ? undefined : counts === -1 ? -1 : (Object.prototype.hasOwnProperty.call(counts, key) ? counts[key] : null));
     });
   }
+  /* 2026-10-22：前回の件数をこのPCに覚えておき、開いたらすぐそれを出す（最新は裏で取りに行って差し替える） */
+  var CACHE_KEY = 'honbu_counts_cache_v1';
+  function saveCache(keys, counts) {
+    try {
+      var c = JSON.parse(localStorage.getItem(CACHE_KEY) || '{}');
+      keys.forEach(function (k) { if (Object.prototype.hasOwnProperty.call(counts, k)) c[k] = counts[k]; });
+      localStorage.setItem(CACHE_KEY, JSON.stringify(c));
+    } catch (e) {}
+  }
+  function showCache() {
+    try {
+      var c = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null');
+      if (!c) return;
+      cards.forEach(function (card) {
+        var k = card.getAttribute('data-count');
+        if (Object.prototype.hasOwnProperty.call(c, k)) show(card, c[k]);
+      });
+    } catch (e) {}
+  }
   function load() {
     var own = KESSAI_API_URL ? ['kessai'] : [];   // 個別に取る項目
     var others = cards.map(function (c) { return c.getAttribute('data-count'); })
                       .filter(function (k) { return own.indexOf(k) < 0; });
     if (!COUNT_API_URL) apply(others, undefined);
-    else getCounts(COUNT_API_URL, true).then(function (c) { apply(others, c); })
+    else getCounts(COUNT_API_URL, true).then(function (c) { apply(others, c); saveCache(others, c); })
                                  .catch(function () { apply(others, -1); });   // 古い件数を出し続けない
     if (KESSAI_API_URL) {
-      getCounts(KESSAI_API_URL).then(function (c) { apply(['kessai'], c); })
+      getCounts(KESSAI_API_URL).then(function (c) { apply(['kessai'], c); saveCache(['kessai'], c); })
                                .catch(function () { apply(['kessai'], -1); });
     }
   }
   // ログインが済んでから取りに行く（2段階認証版GASは通行証が無いと件数を返さない）
   var timer = null;
   document.addEventListener('honbu:unlocked', function () {
+    showCache();
     load();
     if (!timer) timer = setInterval(function () {
       if (!document.getElementById('main').classList.contains('hidden')) load();
