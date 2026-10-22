@@ -101,8 +101,9 @@ td.cell.zero{color:var(--muted)}
 td.cell.sel{outline:2px solid var(--fg);outline-offset:-2px}
 td.tot{font-weight:700}
 /* 投稿回数（✎n）：閲覧回数の右下に小さく出す */
-.pc{display:block;font-size:10.5px;line-height:1.1;font-weight:700;color:var(--post)}
-td.cell.strong .pc{color:var(--accent-ink)}
+/* 2026-10-22：マスの色の濃さに関係なく、投稿回数はいつも同じオレンジのバッジで出す */
+.pc{display:block;width:max-content;margin:3px auto 0;font-size:11px;line-height:1;font-weight:700;
+  background:var(--post);color:var(--post-ink);border-radius:999px;padding:3px 6px}
 .legend{display:flex;flex-wrap:wrap;gap:14px;font-size:12px;color:var(--muted)}
 .legend b{color:var(--post)}
 .act{display:inline-flex;align-items:center;gap:5px;font-size:14px;font-weight:700;line-height:1;border-radius:999px;padding:6px 14px;white-space:nowrap;
