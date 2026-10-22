@@ -389,27 +389,7 @@
   .card .cam-select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   .card .cam-select option { color: #000; background: #fff; font-weight: 400; }
 
-  /* 職員ダッシュボードカード（2026-10-22）：右上に「スマホ版」、下段に「園」プルダウン（全幅・園名を省略しない） */
-  .card .sd-phone-btn {
-    position: absolute;
-    top: 16px;
-    right: 16px;
-    z-index: 2;
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    padding: 5px 14px;
-    border-radius: 999px;
-    font-size: 14px;
-    font-weight: 700;
-    line-height: 1.4;
-    color: #fff;
-    text-decoration: none;
-    background: linear-gradient(135deg, #3a63d8, #5b86f5);
-    transition: transform 0.12s ease, filter 0.12s ease;
-  }
-  .card .sd-phone-btn:hover { transform: translateY(-1px); filter: brightness(1.1); }
-  .card .sd-phone-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  /* 職員ダッシュボードカード（2026-10-22）：下段に「園」プルダウン（選ぶとスマホ枠で開く）（全幅・園名を省略しない） */
   .card .sd-pick {
     margin-top: auto;
     display: flex;
@@ -786,11 +766,9 @@
       </a>
 
       <!-- 職員ダッシュボード（2026-10、旧「危機管理対応状況」の場所）：園を選んで、その園の職員ダッシュボードを本部閲覧モードで開く
-           ・右上「スマホ版」＝このページの上にスマホ枠で表示（2026-10-22：別タブボタンは廃止）
-           ・下の「園」プルダウンで表示する園を選ぶ（園名は省略せず全文表示）
+           ・下の「園」プルダウンで園を選ぶと、このページの上にスマホ枠で表示（2026-10-22：別タブ・スマホ版ボタンは廃止）
            ・本部閲覧モード（?view=honbu）はログイン不要・記録や送信は行わない（仕組みは staff-dashboard/index.html 側） -->
       <div class="card card-split" id="sdCard">
-        <a class="sd-phone-btn" id="sdOpenPhone" href="#" role="button">📱 スマホ版</a>
         <div class="icon c-green">📱</div>
         <div class="title">職員ダッシュボード</div>
         <label class="sd-pick" for="sdGarden">
@@ -814,7 +792,7 @@
 
 <footer>しおどめグループ 本部ダッシュボード</footer>
 
-<!-- 職員ダッシュボードをスマホ枠で表示（「職員ダッシュボード」カードの「スマホ版」から開く） -->
+<!-- 職員ダッシュボードをスマホ枠で表示（「職員ダッシュボード」カードの「園」プルダウンで園を選ぶと開く） -->
 <div id="sdPhone" role="dialog" aria-modal="true" aria-label="職員ダッシュボード（スマホ表示）">
   <div class="ph-bar">
     <select id="sdPhoneGarden" aria-label="表示する園"></select>
@@ -1139,7 +1117,6 @@ document.querySelectorAll('.cam-select[data-cam]').forEach(function (sel) {
   function urlFor(key) { return (SPECIAL_URL[key] || BASE) + '?garden=' + encodeURIComponent(key) + '&view=honbu'; }
 
   var sel = document.getElementById('sdGarden');
-  var phoneBtn = document.getElementById('sdOpenPhone');
   var modal = document.getElementById('sdPhone');
   var mSel = document.getElementById('sdPhoneGarden');
   var frame = document.getElementById('sdPhoneFrame');
@@ -1152,6 +1129,8 @@ document.querySelectorAll('.cam-select[data-cam]').forEach(function (sel) {
     }).join('');
   }
   buildOptions(sel);
+  sel.insertAdjacentHTML('afterbegin', '<option value="" selected>園を選ぶとスマホ枠で開きます</option>');
+  sel.value = '';
   buildOptions(mSel);
 
   var last = '';
@@ -1160,18 +1139,21 @@ document.querySelectorAll('.cam-select[data-cam]').forEach(function (sel) {
 
   function setGarden(key, reloadFrame) {
     if (!key) return;
-    sel.value = key;
     mSel.value = key;
     try { localStorage.setItem(LAST_KEY, key); } catch (e) {}
     if (reloadFrame) frame.src = urlFor(key);
   }
   setGarden(last, false);
 
-  sel.addEventListener('change', function () { setGarden(sel.value, false); });
+  sel.addEventListener('change', function () {
+    var key = sel.value;
+    sel.value = '';            // 次も同じ園を選べるよう、表示は「園を選ぶ…」に戻す
+    if (key) openPhone(key);
+  });
   mSel.addEventListener('change', function () { setGarden(mSel.value, true); });
 
-  function openPhone() {
-    setGarden(sel.value, true);
+  function openPhone(key) {
+    setGarden(key, true);
     modal.classList.add('open');
     document.body.style.overflow = 'hidden';
   }
@@ -1180,7 +1162,6 @@ document.querySelectorAll('.cam-select[data-cam]').forEach(function (sel) {
     document.body.style.overflow = '';
     frame.src = 'about:blank';
   }
-  phoneBtn.addEventListener('click', function (e) { e.preventDefault(); openPhone(); });
   document.getElementById('sdPhoneClose').addEventListener('click', closePhone);
   modal.addEventListener('click', function (e) { if (e.target === modal) closePhone(); });
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && modal.classList.contains('open')) closePhone(); });
