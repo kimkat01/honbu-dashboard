@@ -18,11 +18,24 @@
      ツールを開いたときは「閲覧」、ご意見箱の送信・決裁申請・チャット送信などは「投稿」と記録する。
      それより前の行（H列が空）は「閲覧」として扱う。
      ※ 貼り替えたら setup を1回実行（ログのH1に「操作」の見出しが入ります）→ デプロイを「新バージョン」で更新
+   ・2026-10-27：セキュリティ対策（利用状況画面の合言葉を廃止）
+     これまで利用状況画面（riyo-jokyo.html）のソースに合言葉（VIEW_KEY）が書かれていて、
+     URLを知っている人なら誰でも全職員の名簿と閲覧記録を取り出せた。
+     → 画面で本部アカウント（ログインマスタのG列が「本部」の行）のログインIDとパスワードを入れ、
+       このGASが照合して「通行証」を発行する方式に変更。記録と名簿は通行証があるときだけ渡す。
+     ・通行証は30日有効（そのパソコンのブラウザに保存）。スクリプトプロパティに「vt_…」として保存する
+     ・パスワードを5回続けて間違えると、そのログインIDは15分間ログインできない
+     ・記録（action=log）の受け付けは今までどおり（園長・職員ダッシュボードは変更不要）
+     ・doGet（合言葉で読む古い入口）は何も返さない
+     ※ 貼り替えたら setup は不要。デプロイを「新バージョン」で更新するだけでよい
    ============================================================ */
 
 var LOGIN_MASTER_ID = '1KYQJl14dvvWPM02xMzNye5hFFWiFU_uus-MVH3E-LNY'; // PINマスタ_テンプレート
 var LOGIN_SHEET     = 'ログインマスタ';
-var VIEW_KEY        = 'PgAzmLVXiEdDE3rDNSLjeY6J';   // 利用状況画面だけが知っている合言葉
+var HONBU_ROLE      = '本部';      // ログインマスタG列がこの値の行だけ、利用状況画面に入れる
+var TOKEN_DAYS      = 30;          // 通行証の有効日数
+var FAIL_LIMIT      = 5;           // パスワードをこの回数続けて間違えたら一時停止
+var FAIL_LOCK_SEC   = 900;         // 一時停止の時間（15分）
 var LOG_SHEET       = 'ログ';
 var ARCHIVE_SHEET   = 'ログ_過去分';
 var KEEP_DAYS       = 180;   // これより古い記録は月1回「ログ_過去分」へ移す
@@ -70,8 +83,17 @@ function prepareSheet_(ss, name) {
 
 /* ---------- 記録を受け取る ---------- */
 function doPost(e) {
+  var d;
+  try { d = JSON.parse((e && e.postData && e.postData.contents) || '{}'); } catch (err) { return text_('ng'); }
+  // 利用状況画面（本部）からの入口
+  if (d.action === 'login')  return json_(login_(d.loginId, d.password));
+  if (d.action === 'view')   return viewOut_(d);
+  if (d.action === 'logout') { if (d.token) props_().deleteProperty(tokKey_(d.token)); return json_({ ok: true }); }
+  return logPost_(d);
+}
+
+function logPost_(d) {
   try {
-    var d = JSON.parse((e && e.postData && e.postData.contents) || '{}');
     if (d.action !== 'log') return text_('ng');
     var dash = String(d.dash || '');
     var tool = clip_(d.tool, 40);
@@ -93,20 +115,86 @@ function doPost(e) {
   }
 }
 
-/* ---------- 利用状況画面へ渡す ---------- */
+/* ---------- 古い入口（合言葉で読む）：2026-10-27 廃止 ---------- */
 function doGet(e) {
-  var p = (e && e.parameter) || {};
-  if (p.key !== VIEW_KEY) return json_({ ok: false, error: 'key' });
-  var days = Math.min(MAX_VIEW_DAYS, Math.max(1, parseInt(p.days, 10) || 30));
+  return json_({ ok: false, error: 'auth' });
+}
 
-  if (p.fresh !== '1') {
+/* ---------- 利用状況画面へ渡す（通行証が必要） ---------- */
+function viewOut_(d) {
+  if (!checkToken_(d.token)) return json_({ ok: false, error: 'auth' });
+  var days = Math.min(MAX_VIEW_DAYS, Math.max(1, parseInt(d.days, 10) || 30));
+  var fresh = String(d.fresh) === '1' || d.fresh === true;
+  if (!fresh) {
     var hit = cacheGet_('view_' + days);
     if (hit) return ContentService.createTextOutput(hit).setMimeType(ContentService.MimeType.JSON);
   }
-  var json = JSON.stringify(buildPayload_(days, p.fresh === '1'));
+  var json = JSON.stringify(buildPayload_(days, fresh));
   cachePut_('view_' + days, json, VIEW_CACHE_SEC);
   return ContentService.createTextOutput(json).setMimeType(ContentService.MimeType.JSON);
 }
+
+/* ---------- 本部アカウントのログイン（2026-10-27） ---------- */
+function login_(loginId, password) {
+  var id = norm_(loginId), pw = String(password == null ? '' : password).normalize('NFKC').trim();
+  if (!/^[0-9]{4}$/.test(id) || !pw) return { ok: false, error: 'input', message: 'ログインIDとパスワードを入力してください' };
+
+  var cache = CacheService.getScriptCache();
+  var failKey = 'fail_' + id;
+  var fails = parseInt(cache.get(failKey), 10) || 0;
+  if (fails >= FAIL_LIMIT) return { ok: false, error: 'locked', message: 'パスワードを続けて間違えたため、15分間ログインできません' };
+
+  var sh = SpreadsheetApp.openById(LOGIN_MASTER_ID).getSheetByName(LOGIN_SHEET);
+  var vals = sh.getRange(2, 1, Math.max(1, sh.getLastRow() - 1), 7).getValues();
+  var hit = null;
+  for (var i = 0; i < vals.length; i++) {
+    var r = vals[i];
+    if (norm_(r[1]) !== id || norm_(r[6]) !== HONBU_ROLE) continue;
+    var stored = String(r[3] == null ? '' : r[3]).trim();
+    if (stored && stored === pw) { hit = r; break; }
+  }
+  if (!hit) {
+    cache.put(failKey, String(fails + 1), FAIL_LOCK_SEC);
+    return { ok: false, error: 'bad', message: 'ログインIDまたはパスワードが正しくありません（本部アカウントだけが入れます）' };
+  }
+  cache.remove(failKey);
+  pruneTokens_();
+  var token = Utilities.getUuid().replace(/-/g, '') + Utilities.getUuid().replace(/-/g, '');
+  var exp = Date.now() + TOKEN_DAYS * 86400000;
+  props_().setProperty(tokKey_(token), JSON.stringify({ id: id, name: String(hit[2]).trim(), exp: exp }));
+  return { ok: true, token: token, name: String(hit[2]).trim(), exp: exp };
+}
+
+function checkToken_(token) {
+  if (!token || String(token).length < 40) return null;
+  var key = tokKey_(token);
+  var raw = props_().getProperty(key);
+  if (!raw) return null;
+  var t = null;
+  try { t = JSON.parse(raw); } catch (e) {}
+  if (!t || !t.exp || t.exp < Date.now()) { props_().deleteProperty(key); return null; }
+  return t;
+}
+
+/* 期限切れの通行証を片付ける */
+function pruneTokens_() {
+  try {
+    var p = props_(), all = p.getProperties(), now = Date.now();
+    Object.keys(all).forEach(function (k) {
+      if (k.indexOf('vt_') !== 0) return;
+      var t = null;
+      try { t = JSON.parse(all[k]); } catch (e) {}
+      if (!t || !t.exp || t.exp < now) p.deleteProperty(k);
+    });
+  } catch (e) {}
+}
+
+function props_() { return PropertiesService.getScriptProperties(); }
+function tokKey_(token) {
+  var b = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, String(token), Utilities.Charset.UTF_8);
+  return 'vt_' + b.map(function (x) { return ('0' + (x & 255).toString(16)).slice(-2); }).join('');
+}
+function norm_(s) { return String(s == null ? '' : s).normalize('NFKC').trim(); }
 
 /* 画面に渡す中身を作る（記録＋職員名簿） */
 function buildPayload_(days, freshRoster) {
