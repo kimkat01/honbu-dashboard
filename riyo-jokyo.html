@@ -15,6 +15,11 @@
        （明細の上に「絞り込み中」の札が出て、✕で解除できる）
     ② 「閲覧」と「投稿」を分けて表示する。表の数字は閲覧回数、右下の ✎ は投稿回数。
        明細に「操作」の列（閲覧／投稿）を追加。絞り込みに「操作」を追加
+  ・2026-10-27：セキュリティ対策
+    ページのソースに書いていた合言葉（VIEW_KEY）を廃止。
+    本部アカウント（ログインマスタのG列が「本部」）のログインIDとパスワードでログインすると、
+    GASが通行証を発行し、記録と名簿はその通行証があるときだけ受け取れる。
+    通行証はこのパソコンのブラウザに30日間保存（「ログアウト」で消える）
 -->
 <script>
   // 本部ダッシュボードと同じテーマ（ダーク／ライト）で開く
@@ -137,13 +142,35 @@ td.tot{font-weight:700}
 .count{font-size:13px;color:var(--muted)}
 .banner{border-radius:10px;padding:12px 14px;font-size:14px;border:1px solid var(--line);background:var(--panel)}
 .banner.err{border-color:var(--err);color:var(--err)}
+/* 2026-10-27：本部アカウントのログイン画面 */
+.gate{position:fixed;inset:0;z-index:50;background:var(--bg);display:flex;align-items:flex-start;justify-content:center;overflow-y:auto;
+  padding:12vh max(16px,env(safe-area-inset-right,0px)) 40px max(16px,env(safe-area-inset-left,0px))}
+.gate[hidden]{display:none}
+.gate .card{width:100%;max-width:400px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:24px;display:flex;flex-direction:column;gap:14px}
+.gate h2{font-size:20px;margin:0}
+.gate p{margin:0;font-size:14px;color:var(--muted)}
+.gate label{font-size:13px;color:var(--muted);display:flex;flex-direction:column;gap:4px}
+.gate input{font:inherit;font-size:16px;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:8px 10px;min-height:42px}
+.gate .go{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:700;min-height:44px}
+.gate .msg{color:var(--err);font-size:14px;min-height:1.4em}
 </style>
 </head>
 <body>
+<div class="gate" id="gate" hidden>
+  <form class="card" id="gateForm" autocomplete="on">
+    <h2>利用状況</h2>
+    <p>本部アカウントのログインIDとパスワードを入力してください。<br>（園長ダッシュボードの本部用と同じです）</p>
+    <label>ログインID（4桁）<input id="gId" inputmode="numeric" autocomplete="username" maxlength="4" required></label>
+    <label>パスワード<input id="gPw" type="password" autocomplete="current-password" required></label>
+    <div class="msg" id="gMsg" role="alert"></div>
+    <button class="btn go" id="gBtn" type="submit">ログイン</button>
+    <p>このパソコンでは30日間ログインしたままになります。</p>
+  </form>
+</div>
 <div class="wrap">
   <header class="top">
     <h1>利用状況</h1>
-    <span class="asof"><span>集計時点 <span class="num" id="asof">—</span></span><button class="btn" id="reload" type="button">最新にする</button></span>
+    <span class="asof"><span>集計時点 <span class="num" id="asof">—</span></span><button class="btn" id="reload" type="button">最新にする</button><button class="btn" id="logout" type="button">ログアウト</button></span>
   </header>
 
   <div class="banner" id="banner">記録を読み込んでいます…</div>
@@ -211,7 +238,7 @@ td.tot{font-weight:700}
 (function(){
   /* ===== 設定 ===== */
   var LOG_API_URL = 'https://script.google.com/macros/s/AKfycbxtFnYXdUs1XW5nIEoLmbJXo7HlGe7z4r-Uftuxv-tZq-CNF1vOk3JKzQXOUC7h-cAMSw/exec';   // ← GAS「アクセスログ」のウェブアプリ /exec のURL
-  var VIEW_KEY = 'PgAzmLVXiEdDE3rDNSLjeY6J';   // GAS側の VIEW_KEY と同じ値
+  var AUTH_KEY = 'riyo_auth_v1';   // 通行証（本部アカウントでログインしたときにGASが発行）の保存場所
   var FETCH_DAYS = 90;   // GASから受け取る最大日数（GAS側の上限も90日）
   /* 記録の開始日（2026-10-14）。これより前は数えない。
      「開いていない人」も、この日以降に一度も開いていない人を出す */
@@ -471,38 +498,83 @@ td.tot{font-weight:700}
   function loadCache(){ try{ var s = localStorage.getItem(CACHE_KEY); return s ? JSON.parse(s) : null; }catch(e){ return null; } }
   function showData(d){ build(d); render(); shown = true; }
 
+  /* ===== 2026-10-27：本部アカウントのログイン ===== */
+  function getAuth(){
+    try{ var a = JSON.parse(localStorage.getItem(AUTH_KEY) || 'null'); if(a && a.token && a.exp > Date.now()) return a; }catch(e){}
+    return null;
+  }
+  function clearAuth(){
+    try{ localStorage.removeItem(AUTH_KEY); localStorage.removeItem(CACHE_KEY); }catch(e){}
+  }
+  function api(body, signal){
+    var opt = { method:'POST', body: JSON.stringify(body), redirect:'follow' };   // text/plain で送る（事前確認なし）
+    if(signal) opt.signal = signal;
+    return fetch(LOG_API_URL, opt).then(function(r){ if(!r.ok) throw new Error('HTTP ' + r.status); return r.json(); });
+  }
+  function showGate(msg){
+    $('gate').hidden = false;
+    $('gMsg').textContent = msg || '';
+    setTimeout(function(){ $('gId').focus(); }, 50);
+  }
+  $('gateForm').addEventListener('submit', function(ev){
+    ev.preventDefault();
+    var id = String($('gId').value || '').normalize('NFKC').trim(), pw = $('gPw').value;
+    if(!/^[0-9]{4}$/.test(id) || !pw){ $('gMsg').textContent = 'ログインID（4桁の数字）とパスワードを入力してください'; return; }
+    $('gBtn').disabled = true; $('gMsg').textContent = '確認しています…';
+    api({ action:'login', loginId:id, password:pw }).then(function(res){
+      $('gBtn').disabled = false;
+      if(!res || !res.ok){ $('gMsg').textContent = (res && res.message) || 'ログインできませんでした'; return; }
+      try{ localStorage.setItem(AUTH_KEY, JSON.stringify({ token:res.token, exp:res.exp, name:res.name })); }catch(e){}
+      $('gPw').value = '';
+      $('gate').hidden = true;
+      load(true);
+    }).catch(function(){
+      $('gBtn').disabled = false;
+      $('gMsg').textContent = '通信できませんでした。少し待ってから、もう一度お試しください';
+    });
+  });
+  $('logout').addEventListener('click', function(){
+    var a = getAuth();
+    if(a) api({ action:'logout', token:a.token }).catch(function(){});
+    clearAuth();
+    location.reload();
+  });
+
   function load(fresh){
     if(!LOG_API_URL){
       banner('記録用GAS（アクセスログ）のURLがまだ設定されていません。設定すると、ここに実際の記録が表示されます。', true);
       buildToolSelect(); render();
       return;
     }
+    var auth = getAuth();
+    if(!auth){ clearAuth(); showGate(); return; }
     $('reload').disabled = true;
     if(shown) banner('最新の記録を読み込んでいます…（いま表示しているのは ' + $('asof').textContent + ' 時点）');
     var ctrl = window.AbortController ? new AbortController() : null;
     var timer = setTimeout(function(){ if(ctrl) ctrl.abort(); }, FETCH_TIMEOUT_MS);
-    fetch(LOG_API_URL + '?key=' + encodeURIComponent(VIEW_KEY) + '&days=' + FETCH_DAYS + (fresh ? '&fresh=1' : '') + '&t=' + Date.now(),
-          ctrl ? { signal: ctrl.signal } : undefined)
-      .then(function(r){ if(!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    api({ action:'view', token:auth.token, days:FETCH_DAYS, fresh: fresh ? '1' : '' }, ctrl ? ctrl.signal : null)
       .then(function(d){
-        if(!d || !d.ok) throw new Error(d && d.error === 'key' ? '合言葉（VIEW_KEY）がGASと一致していません' : '記録を読み込めませんでした');
+        if(d && d.error === 'auth'){ clearAuth(); showGate('ログインの有効期限が切れました。もう一度ログインしてください'); var e = new Error('auth'); e.silent = true; throw e; }
+        if(!d || !d.ok) throw new Error('記録を読み込めませんでした');
         saveCache(d);
         showData(d);
         banner(EVENTS.length ? '' : '記録はまだありません。園長・職員がダッシュボードのツールを開くと、ここに表示されます。');
       })
       .catch(function(err){
+        if(err && err.silent) return;
         var msg = (err && err.name === 'AbortError') ? '記録用GASの応答に時間がかかっています' : '記録を読み込めませんでした（' + (err && err.message || '通信エラー') + '）';
         banner(msg + '。' + (shown ? 'いまは ' + $('asof').textContent + ' 時点の記録を表示しています。' : '') + '少し待ってから「最新にする」を押してください。', true);
       })
       .then(function(){ clearTimeout(timer); $('reload').disabled = false; });
   }
   $('reload').addEventListener('click', function(){ load(true); });
-  var cached = loadCache();
+  var cached = getAuth() ? loadCache() : null;   // ログインしていないときは、保存してある記録も出さない
+  if(!cached) { try{ localStorage.removeItem(CACHE_KEY); }catch(e){} }
   if(cached && cached.ok){
     try{ showData(cached); banner('最新の記録を読み込んでいます…（いま表示しているのは ' + $('asof').textContent + ' 時点）'); }catch(e){ shown = false; }
   }
   load(false);
-  setInterval(function(){ if(!document.hidden) load(false); }, AUTO_REFRESH_MS);
+  setInterval(function(){ if(!document.hidden && getAuth()) load(false); }, AUTO_REFRESH_MS);
 })();
 </script>
 </body>
