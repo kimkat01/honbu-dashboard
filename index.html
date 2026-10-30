@@ -1151,6 +1151,7 @@ document.querySelectorAll('.cam-select[data-cam]').forEach(function (sel) {
       user: function () { return { loginId: 'honbu', name: '' }; },
       accent: '#3a63d8',
       showFab: false,   // 右下の💬ボタンは出さず、このカードから開く
+      center: true,     // 2026-10-30：画面の真ん中に出す・青い帯をつまんで動かせる・文字を3ポイント大きく
       onUnread: function (n) {
         pill.className = 'pill ' + (n > 0 ? 'warn' : 'ok');
         pill.textContent = n > 0 ? '未読 ' + n + '件' : '未読なし';
