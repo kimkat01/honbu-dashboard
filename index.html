@@ -390,7 +390,11 @@
   .card .cam-select option { color: #000; background: #fff; font-weight: 400; }
 
   /* 職員ダッシュボードカード（2026-10-22）：下段に「園」プルダウン（選ぶとスマホ枠で開く）（全幅・園名を省略しない） */
+  /* 2026-11-01：カード名を1行に収める（2行になるとプルダウンが下で切れていたため） */
+  .card .sd-title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .card .sd-title small { font-size: 12px; font-weight: 700; }
   .card .sd-pick {
+    flex-shrink: 0;
     margin-top: auto;
     display: flex;
     align-items: stretch;
@@ -793,7 +797,7 @@
            ・本部閲覧モード（?view=honbu）はログイン不要・記録や送信は行わない（仕組みは staff-dashboard/index.html 側） -->
       <div class="card card-split" id="sdCard">
         <div class="icon c-green">📱</div>
-        <div class="title">ANSHIN KUN（職員ダッシュボード）</div>
+        <div class="title sd-title">ANSHIN KUN<small>（職員ダッシュボード）</small></div>
         <label class="sd-pick" for="sdGarden">
           <span class="sd-pick-label">園</span>
           <select class="sd-select" id="sdGarden" aria-label="職員ダッシュボード：表示する園を選ぶ"></select>
@@ -1185,7 +1189,7 @@ document.querySelectorAll('.cam-select[data-cam]').forEach(function (sel) {
     }).join('');
   }
   buildOptions(sel);
-  sel.insertAdjacentHTML('afterbegin', '<option value="" selected>園を選ぶとスマホ枠で開きます</option>');
+  sel.insertAdjacentHTML('afterbegin', '<option value="" selected>園を選ぶ</option>');
   sel.value = '';
   buildOptions(mSel);
 
