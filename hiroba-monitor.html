@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>ひろば入室状況｜本部ダッシュボード</title>
+<!--
+  しおどめひろば 入室状況（2026-11-01）
+  ・置き場所：kimkat01/honbu-dashboard リポジトリの一番上（hiroba-monitor.html）
+  ・しおどめひろば（staff-dashboard/hiroba/）に「だれが・いつ・どのアバターで入ったか」を本部が見る画面
+    （職員には了解を得ている。会話の内容は記録しない）
+  ・データは GAS「しおどめひろば 通信」（cryk0289）の action=monitor から読む
+    記録はスプレッドシート「しおどめひろば」のシート「入室記録」にたまる
+  ・本部ダッシュボードの通行証（2段階認証で発行、localStorage の honbu_token）があるときだけGASが返す
+  ・いまいる人は10秒ごとに自動で更新する
+-->
+<script>
+  // 本部ダッシュボードと同じテーマ（ダーク／ライト）で開く
+  (function(){ var t = 'dark'; try{ t = localStorage.getItem('honbu_theme') || 'dark'; }catch(e){} document.documentElement.setAttribute('data-theme', t); })();
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+:root{
+  --bg:#f4f6fb; --panel:#ffffff; --fg:#000000; --muted:#4a5266; --line:#dde2ee;
+  --accent:#3a63d8; --accent-soft:#e6ecfc; --accent-ink:#ffffff;
+  --ok:#1f7a4d; --ok-soft:#e1f3ea; --warn:#a3570b; --warn-soft:#fdf1e3; --err:#b42318;
+  --font-body:"BIZ UDPGothic","Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,sans-serif;
+  --font-num:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+}
+:root[data-theme="dark"]{
+  --bg:#0c0f1c; --panel:#1b2233; --fg:#eef0f8; --muted:#a3abc0; --line:#2c3446;
+  --accent:#6f93f5; --accent-soft:#232c48; --accent-ink:#0d1220;
+  --ok:#5fd39a; --ok-soft:#173327; --warn:#f0a35c; --warn-soft:#3a2a18; --err:#ff8a80; color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--font-body);font-size:15px;line-height:1.6;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  padding-top:env(safe-area-inset-top,0px);padding-bottom:calc(40px + env(safe-area-inset-bottom,0px))}
+.wrap{max-width:1200px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+header.top{display:flex;flex-wrap:wrap;align-items:center;gap:12px;padding-top:20px}
+header.top h1{font-size:24px;margin:0}
+.asof{margin-left:auto;color:var(--muted);font-size:13px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.btn{font:inherit;font-size:14px;border:1px solid var(--line);background:var(--panel);color:var(--fg);border-radius:6px;padding:6px 14px;cursor:pointer;min-height:36px;text-decoration:none;display:inline-flex;align-items:center}
+.btn:hover{border-color:var(--accent)}
+.btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.num{font-family:var(--font-num);font-variant-numeric:tabular-nums}
+.note{background:var(--accent-soft);border-radius:10px;padding:10px 14px;font-size:13px;line-height:1.7}
+.banner{border-radius:10px;padding:12px 14px;font-size:14px;background:var(--warn-soft);color:var(--fg);border:1px solid var(--warn)}
+.banner a{color:var(--accent);font-weight:700}
+.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.stat .k{font-size:12px;color:var(--muted);letter-spacing:.04em}
+.stat .v{font-size:28px;font-weight:700;line-height:1.2}
+.stat .s{font-size:13px;color:var(--muted)}
+@media (max-width:640px){.stats{grid-template-columns:minmax(0,1fr)}}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;min-width:0;display:flex;flex-direction:column;gap:10px}
+.panel h2{font-size:17px;margin:0;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.panel h2 small{font-size:12px;color:var(--muted);font-weight:400}
+.scroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%}
+th,td{font-size:14px;padding:8px 10px;text-align:left;white-space:nowrap;border-bottom:1px solid var(--line)}
+thead th{font-size:12px;color:var(--muted);font-weight:700;letter-spacing:.04em}
+tbody tr:last-child td{border-bottom:0}
+.av{display:inline-flex;align-items:center;gap:8px}
+.dot{width:12px;height:12px;border-radius:50%;flex:0 0 auto;border:1px solid rgba(0,0,0,.15)}
+.how{display:inline-block;font-size:12px;border-radius:999px;padding:2px 10px;background:var(--accent-soft);color:var(--fg)}
+.how.ok{background:var(--ok-soft);color:var(--ok);font-weight:700}
+.how.warn{background:var(--warn-soft);color:var(--warn);font-weight:700}
+.live{display:inline-block;font-size:12px;font-weight:700;border-radius:999px;padding:2px 10px;background:var(--ok-soft);color:var(--ok)}
+.empty{color:var(--muted);font-size:14px;padding:6px 2px}
+.muted{color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <h1>しおどめひろば 入室状況</h1>
+    <div class="asof">
+      <span id="asof">読み込み中…</span>
+      <button class="btn" id="reload" type="button">最新にする</button>
+      <a class="btn" href="index.html">本部ダッシュボードへ</a>
+    </div>
+  </header>
+
+  <div class="note">
+    しおどめひろばに入った人の記録です（職員には了解を得ています）。ひろばの参加者どうしには、アバターと表示名だけが見えています。
+    会話の内容は記録していません。記録の元は、スプレッドシート「しおどめひろば」のシート「入室記録」です。
+  </div>
+  <div class="banner" id="banner" hidden></div>
+
+  <div class="stats">
+    <div class="stat"><span class="k">いまひろばにいる人</span><span class="v num" id="stNow">–</span><span class="s">10秒ごとに更新</span></div>
+    <div class="stat"><span class="k">今日の入室</span><span class="v num" id="stToday">–</span><span class="s">同じ人が出入りすると、その回数分</span></div>
+    <div class="stat"><span class="k">今日入った人</span><span class="v num" id="stPeople">–</span><span class="s">本名で数えた人数</span></div>
+  </div>
+
+  <section class="panel">
+    <h2>いまひろばにいる人</h2>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>アバター</th><th>本名</th><th>所属</th><th>ログインID</th><th>入室</th><th>本人確認</th></tr></thead>
+        <tbody id="present"><tr><td colspan="6" class="empty">読み込み中…</td></tr></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>入室記録 <small>新しい順・最大200件</small></h2>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>入室</th><th>退室</th><th>滞在</th><th>アバター</th><th>本名</th><th>所属</th><th>ログインID</th><th>本人確認</th></tr></thead>
+        <tbody id="log"><tr><td colspan="8" class="empty">読み込み中…</td></tr></tbody>
+      </table>
+    </div>
+  </section>
+</div>
+
+<script>
+(function(){
+  var HIROBA_GAS = 'https://script.google.com/macros/s/AKfycbwinrl4ff1pVRE-zgsGZ3WdSWfGcFHeRVoSb2GtpAwwIG0ziTu1FrctQPkzfBq71f54/exec';  // GAS「しおどめひろば 通信」
+  var REFRESH_MS = 10000;
+  var timer = null;
+
+  function $(id){ return document.getElementById(id); }
+  function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+  function token(){
+    try{ var t = JSON.parse(localStorage.getItem('honbu_token') || 'null'); if(t && t.token && t.exp > Date.now()) return t.token; }catch(e){}
+    return '';
+  }
+  function pad(n){ return (n < 10 ? '0' : '') + n; }
+  function fmt(ms, withDate){
+    if(!ms) return '';
+    var d = new Date(ms);
+    var t = pad(d.getHours()) + ':' + pad(d.getMinutes());
+    return withDate ? (d.getMonth()+1) + '/' + d.getDate() + ' ' + t : t;
+  }
+  function stay(a, b){
+    if(!a || !b) return '';
+    var m = Math.max(0, Math.round((b - a) / 60000));
+    return m < 60 ? m + '分' : Math.floor(m/60) + '時間' + (m % 60) + '分';
+  }
+  function howTag(h){
+    var cls = /確認$/.test(h) && !/できず/.test(h) ? 'how ok' : (/なし|できず|期限切れ/.test(h) ? 'how warn' : 'how');
+    return '<span class="' + cls + '">' + esc(h || '—') + '</span>';
+  }
+  function banner(html){ var b = $('banner'); if(html){ b.innerHTML = html; b.hidden = false; } else { b.hidden = true; } }
+  function sameDay(ms, now){ var a = new Date(ms), b = new Date(now); return a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth() && a.getDate()===b.getDate(); }
+
+  function render(d){
+    var now = d.now || Date.now();
+    $('asof').textContent = '最終更新 ' + fmt(now) + (d.viewer ? '（' + d.viewer + 'として表示）' : '');
+    // いまいる人
+    var pr = d.present || [];
+    $('stNow').textContent = pr.length;
+    $('present').innerHTML = pr.length ? pr.map(function(p){
+      return '<tr>' +
+        '<td><span class="av"><span class="dot" style="background:' + esc(p.color) + '"></span>' + esc(p.avatar) + '</span></td>' +
+        '<td><b>' + esc(p.name) + '</b></td><td>' + esc(p.org) + '</td><td class="num">' + esc(p.loginId) + '</td>' +
+        '<td class="num">' + fmt(p.since) + ' <span class="live">入室中</span></td><td>' + howTag(p.how) + '</td></tr>';
+    }).join('') : '<tr><td colspan="6" class="empty">いまは誰もいません。</td></tr>';
+    // 記録
+    var lg = d.log || [];
+    var today = lg.filter(function(r){ return r.inAt && sameDay(r.inAt, now); });
+    $('stToday').textContent = today.length;
+    var names = {}; today.forEach(function(r){ names[(r.name || '不明') + '|' + (r.org || '')] = 1; });
+    $('stPeople').textContent = Object.keys(names).length;
+    $('log').innerHTML = lg.length ? lg.map(function(r){
+      var inside = !r.outAt;
+      return '<tr>' +
+        '<td class="num">' + fmt(r.inAt, true) + '</td>' +
+        '<td class="num">' + (inside ? '<span class="live">入室中</span>' : fmt(r.outAt, true)) + '</td>' +
+        '<td class="num">' + (inside ? '' : stay(r.inAt, r.outAt)) + '</td>' +
+        '<td>' + esc(r.avatar) + '</td><td><b>' + esc(r.name) + '</b></td><td>' + esc(r.org) + '</td>' +
+        '<td class="num">' + esc(r.loginId) + '</td><td>' + howTag(r.how) + '</td></tr>';
+    }).join('') : '<tr><td colspan="8" class="empty">まだ記録はありません。</td></tr>';
+  }
+
+  function load(){
+    var t = token();
+    if(!t){
+      banner('本部ダッシュボードのログインが切れています。<a href="index.html">本部ダッシュボード</a>でログインしてから、もう一度開いてください。');
+      $('asof').textContent = '';
+      $('present').innerHTML = '<tr><td colspan="6" class="empty">ログインすると表示されます。</td></tr>';
+      $('log').innerHTML = '<tr><td colspan="8" class="empty">ログインすると表示されます。</td></tr>';
+      return;
+    }
+    fetch(HIROBA_GAS, { method:'POST', headers:{ 'Content-Type':'text/plain;charset=utf-8' }, body: JSON.stringify({ action:'monitor', token:t }) })
+      .then(function(r){ return r.json(); })
+      .then(function(d){
+        if(!d || !d.ok){
+          if(d && d.error === 'auth') banner('本部ダッシュボードのログインが確認できませんでした。<a href="index.html">本部ダッシュボード</a>でログインし直してから、もう一度開いてください。');
+          else banner('記録を読み込めませんでした（' + esc(d && d.message || '不明なエラー') + '）。少し待ってから「最新にする」を押してください。');
+          return;
+        }
+        banner('');
+        render(d);
+      })
+      .catch(function(){ banner('通信できませんでした。インターネットにつながっているか確かめて、「最新にする」を押してください。'); });
+  }
+  function schedule(){ clearInterval(timer); timer = setInterval(function(){ if(!document.hidden) load(); }, REFRESH_MS); }
+
+  $('reload').addEventListener('click', load);
+  document.addEventListener('visibilitychange', function(){ if(!document.hidden) load(); });
+  load(); schedule();
+})();
+</script>
+</body>
+</html>
