@@ -11,7 +11,9 @@
     （職員には了解を得ている。会話の内容は記録しない）
   ・データは GAS「しおどめひろば 通信」（cryk0289）の action=monitor から読む
     記録はスプレッドシート「しおどめひろば」のシート「入室記録」にたまる
-  ・本部ダッシュボードの通行証（2段階認証で発行、localStorage の honbu_token）があるときだけGASが返す
+  ・本部アカウント（ログインマスタのG列が「本部」の行）のログインID＋パスワードでログインすると、
+    GASが通行証（30日有効、このブラウザの localStorage「hiroba_mon_auth」）を発行し、一覧はその通行証があるときだけ返す
+    （利用状況画面と同じ方式。ログインしたブラウザでひろばに入ると、入室記録にも本部アカウントの名前で残る）
   ・いまいる人は10秒ごとに自動で更新する
 -->
 <script>
@@ -71,6 +73,15 @@ tbody tr:last-child td{border-bottom:0}
 .live{display:inline-block;font-size:12px;font-weight:700;border-radius:999px;padding:2px 10px;background:var(--ok-soft);color:var(--ok)}
 .empty{color:var(--muted);font-size:14px;padding:6px 2px}
 .muted{color:var(--muted)}
+.login{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:18px;display:flex;flex-direction:column;gap:12px;max-width:440px}
+.login h2{font-size:17px;margin:0}
+.login p{margin:0;font-size:13px;color:var(--muted)}
+.login label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted)}
+.login input{font:inherit;font-size:16px;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:8px 10px}
+.login input:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.login .err{color:var(--err);font-size:13px;min-height:1em}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:700}
+.btn[hidden]{display:none}
 </style>
 </head>
 <body>
@@ -80,6 +91,7 @@ tbody tr:last-child td{border-bottom:0}
     <div class="asof">
       <span id="asof">読み込み中…</span>
       <button class="btn" id="reload" type="button">最新にする</button>
+      <button class="btn" id="logout" type="button" hidden>ログアウト</button>
       <a class="btn" href="index.html">本部ダッシュボードへ</a>
     </div>
   </header>
@@ -90,6 +102,16 @@ tbody tr:last-child td{border-bottom:0}
   </div>
   <div class="banner" id="banner" hidden></div>
 
+  <form class="login" id="login" hidden autocomplete="on">
+    <h2>本部アカウントでログイン</h2>
+    <p>利用状況画面と同じ、本部アカウント（ANSHIN KUN のログインマスタで「本部」の人）のログインIDとパスワードを入れてください。一度ログインすると、このブラウザでは30日間そのまま開けます。</p>
+    <label for="lgId">ログインID（4桁）<input id="lgId" inputmode="numeric" maxlength="4" autocomplete="username"></label>
+    <label for="lgPw">パスワード<input id="lgPw" type="password" autocomplete="current-password"></label>
+    <div class="err" id="lgErr" role="alert"></div>
+    <button class="btn primary" id="lgBtn" type="submit">ログイン</button>
+  </form>
+
+  <div id="content" hidden>
   <div class="stats">
     <div class="stat"><span class="k">いまひろばにいる人</span><span class="v num" id="stNow">–</span><span class="s">10秒ごとに更新</span></div>
     <div class="stat"><span class="k">今日の入室</span><span class="v num" id="stToday">–</span><span class="s">同じ人が出入りすると、その回数分</span></div>
@@ -115,6 +137,7 @@ tbody tr:last-child td{border-bottom:0}
       </table>
     </div>
   </section>
+  </div>
 </div>
 
 <script>
@@ -125,10 +148,44 @@ tbody tr:last-child td{border-bottom:0}
 
   function $(id){ return document.getElementById(id); }
   function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
-  function token(){
-    try{ var t = JSON.parse(localStorage.getItem('honbu_token') || 'null'); if(t && t.token && t.exp > Date.now()) return t.token; }catch(e){}
-    return '';
+  var AUTH_KEY = 'hiroba_mon_auth';   // 本部アカウントの通行証（このGASが発行。ひろばでも本人確認に使う）
+  function auth(){
+    try{ var a = JSON.parse(localStorage.getItem(AUTH_KEY) || 'null'); if(a && a.token && a.exp > Date.now()) return a; }catch(e){}
+    return null;
   }
+  function token(){ var a = auth(); return a ? a.token : ''; }
+  function api(body){
+    return fetch(HIROBA_GAS, { method:'POST', headers:{ 'Content-Type':'text/plain;charset=utf-8' }, body: JSON.stringify(body) }).then(function(r){ return r.json(); });
+  }
+  function showLogin(msg){
+    $('login').hidden = false; $('content').hidden = true; $('logout').hidden = true;
+    $('asof').textContent = '';
+    $('lgErr').textContent = msg || '';
+    setTimeout(function(){ $('lgId').focus(); }, 50);
+  }
+  function showContent(){ $('login').hidden = true; $('content').hidden = false; $('logout').hidden = false; }
+  $('login').addEventListener('submit', function(e){
+    e.preventDefault();
+    var btn = $('lgBtn'); btn.disabled = true; btn.textContent = '確認中…'; $('lgErr').textContent = '';
+    api({ action:'login', loginId: $('lgId').value, password: $('lgPw').value })
+      .then(function(d){
+        if(d && d.ok){
+          try{ localStorage.setItem(AUTH_KEY, JSON.stringify({ token:d.token, exp:d.exp, name:d.name })); }catch(err){}
+          $('lgPw').value = '';
+          load();
+        } else {
+          $('lgErr').textContent = (d && d.message) || 'ログインできませんでした';
+        }
+      })
+      .catch(function(){ $('lgErr').textContent = '通信できませんでした。少し待ってから、もう一度押してください。'; })
+      .then(function(){ btn.disabled = false; btn.textContent = 'ログイン'; });
+  });
+  $('logout').addEventListener('click', function(){
+    var t = token();
+    try{ localStorage.removeItem(AUTH_KEY); }catch(e){}
+    if(t) api({ action:'logout', token:t }).catch(function(){});
+    showLogin('ログアウトしました。');
+  });
   function pad(n){ return (n < 10 ? '0' : '') + n; }
   function fmt(ms, withDate){
     if(!ms) return '';
@@ -179,27 +236,24 @@ tbody tr:last-child td{border-bottom:0}
 
   function load(){
     var t = token();
-    if(!t){
-      banner('本部ダッシュボードのログインが切れています。<a href="index.html">本部ダッシュボード</a>でログインしてから、もう一度開いてください。');
-      $('asof').textContent = '';
-      $('present').innerHTML = '<tr><td colspan="6" class="empty">ログインすると表示されます。</td></tr>';
-      $('log').innerHTML = '<tr><td colspan="8" class="empty">ログインすると表示されます。</td></tr>';
-      return;
-    }
-    fetch(HIROBA_GAS, { method:'POST', headers:{ 'Content-Type':'text/plain;charset=utf-8' }, body: JSON.stringify({ action:'monitor', token:t }) })
-      .then(function(r){ return r.json(); })
+    if(!t){ banner(''); showLogin(''); return; }
+    api({ action:'monitor', token:t })
       .then(function(d){
         if(!d || !d.ok){
-          if(d && d.error === 'auth') banner('本部ダッシュボードのログインが確認できませんでした。<a href="index.html">本部ダッシュボード</a>でログインし直してから、もう一度開いてください。');
+          if(d && d.error === 'auth'){
+            try{ localStorage.removeItem(AUTH_KEY); }catch(e){}
+            banner(''); showLogin('ログインの期限が切れました。もう一度ログインしてください。');
+          }
           else banner('記録を読み込めませんでした（' + esc(d && d.message || '不明なエラー') + '）。少し待ってから「最新にする」を押してください。');
           return;
         }
         banner('');
+        showContent();
         render(d);
       })
       .catch(function(){ banner('通信できませんでした。インターネットにつながっているか確かめて、「最新にする」を押してください。'); });
   }
-  function schedule(){ clearInterval(timer); timer = setInterval(function(){ if(!document.hidden) load(); }, REFRESH_MS); }
+  function schedule(){ clearInterval(timer); timer = setInterval(function(){ if(!document.hidden && token()) load(); }, REFRESH_MS); }
 
   $('reload').addEventListener('click', load);
   document.addEventListener('visibilitychange', function(){ if(!document.hidden) load(); });
