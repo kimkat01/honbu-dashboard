@@ -982,6 +982,16 @@
        ・通行証（12時間有効）がこのPCに残っていれば、すぐにダッシュボードを開き、確認は裏で行う。
          裏の確認で無効と分かったときだけ、ログイン画面に戻す
        ・通行証が無ければ、すぐにログイン画面を出す（GASの返事を待たない） */
+    // ポータルサイトの「ログアウト」から ?logout=1 で来たとき（2026-11-02）：通行証を取り消してログイン画面を出す
+    if (new URLSearchParams(location.search).get('logout') === '1') {
+      var outToken = getToken();
+      clearToken();
+      if (outToken) post({ action: 'logout', token: outToken }).catch(function () {});
+      try {
+        localStorage.removeItem('sd_honbu_viewer');
+        history.replaceState(null, '', location.pathname);
+      } catch (e) {}
+    }
     var t = getToken();
     if (t) unlock(true);
     else step('gate-loading');   // 認証確認中は入力欄を見せず、スピナーを表示
