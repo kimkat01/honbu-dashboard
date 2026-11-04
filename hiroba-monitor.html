@@ -15,6 +15,8 @@
     GASが通行証（30日有効、このブラウザの localStorage「hiroba_mon_auth」）を発行し、一覧はその通行証があるときだけ返す
     （利用状況画面と同じ方式。ログインしたブラウザでひろばに入ると、入室記録にも本部アカウントの名前で残る）
   ・いまいる人と見取り図（上から見た2Dの図）は5秒ごとに自動で更新する
+  ・2026-11-04：法人ガバナンス強化のため、話した言葉（シート「会話記録」）と本音ボードの書き込み（シート「本音ボード」）を、
+    書いた人・話した人つきで表示する。ひろばの参加者どうしには、これまでどおりアバターと表示名しか見えない
 -->
 <script>
   // 本部ダッシュボードと同じテーマ（ダーク／ライト）で開く
@@ -95,6 +97,14 @@ tbody tr:last-child td{border-bottom:0}
 #map .pin .tagbg{fill:var(--tag-bg);opacity:.92;stroke:var(--line)}
 @media (prefers-reduced-motion:reduce){#map .pin{transition:none}}
 .maphint{font-size:13px;color:var(--muted);margin:0}
+.tall{max-height:520px;overflow:auto}
+.tall thead th{position:sticky;top:0;background:var(--panel);z-index:1}
+td.wrap{white-space:normal;min-width:240px;max-width:460px;overflow-wrap:anywhere}
+td.near{white-space:normal;min-width:160px;max-width:300px;color:var(--muted);font-size:13px}
+.filter{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.filter input{font:inherit;font-size:15px;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:6px 10px;min-height:36px;width:240px;max-width:100%}
+.filter input:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.cnt{font-size:13px;color:var(--muted)}
 </style>
 </head>
 <body>
@@ -110,8 +120,8 @@ tbody tr:last-child td{border-bottom:0}
   </header>
 
   <div class="note">
-    しおどめひろばに入った人の記録です（職員には了解を得ています）。ひろばの参加者どうしには、アバターと表示名だけが見えています。
-    会話の内容は記録していません。記録の元は、スプレッドシート「しおどめひろば」のシート「入室記録」です。
+    しおどめひろばに入った人・話した言葉・本音ボードの書き込みの記録です（法人ガバナンス強化のため）。ひろばの参加者どうしには、アバターと表示名だけが見えています。
+    記録の元は、スプレッドシート「しおどめひろば」のシート「入室記録」「会話記録」「本音ボード」です。
   </div>
   <div class="banner" id="banner" hidden></div>
 
@@ -143,6 +153,27 @@ tbody tr:last-child td{border-bottom:0}
       <table>
         <thead><tr><th>アバター</th><th>本名</th><th>所属</th><th>ログインID</th><th>入室</th><th>本人確認</th></tr></thead>
         <tbody id="present"><tr><td colspan="6" class="empty">読み込み中…</td></tr></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>会話記録 <small>ひろばで話した言葉。新しい順・最大300件</small></h2>
+    <div class="filter"><input type="search" id="talkQ" placeholder="名前・園・言葉でしぼりこむ" aria-label="会話記録をしぼりこむ"><span class="cnt" id="talkCnt"></span></div>
+    <div class="scroll tall">
+      <table>
+        <thead><tr><th>日時</th><th>本名</th><th>所属</th><th>アバター</th><th>話した言葉</th><th>近くにいた人</th></tr></thead>
+        <tbody id="talk"><tr><td colspan="6" class="empty">読み込み中…</td></tr></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>本音ボード <small>書いた人つき。新しい順・最大200件</small></h2>
+    <div class="scroll tall">
+      <table>
+        <thead><tr><th>日時</th><th>本名</th><th>所属</th><th>アバター</th><th>書き込み</th><th>わかる</th></tr></thead>
+        <tbody id="notes"><tr><td colspan="6" class="empty">読み込み中…</td></tr></tbody>
       </table>
     </div>
   </section>
@@ -293,8 +324,30 @@ tbody tr:last-child td{border-bottom:0}
     $('mapHint').textContent = pr.length ? '5秒ごとに位置を更新します。名前の上にマウスを置くと、所属も表示されます。' : 'いまは誰もいません。5秒ごとに確認しています。';
   }
 
+  /* ---------- 会話記録・本音ボード（書いた人つき） ---------- */
+  var lastTalk = [];
+  function renderTalk(){
+    var q = ($('talkQ').value || '').trim();
+    var rows = q ? lastTalk.filter(function(r){ return (r.name + ' ' + r.org + ' ' + r.avatar + ' ' + r.text + ' ' + r.near).indexOf(q) >= 0; }) : lastTalk;
+    $('talkCnt').textContent = q ? rows.length + '件（全' + lastTalk.length + '件中）' : lastTalk.length + '件';
+    $('talk').innerHTML = rows.length ? rows.map(function(r){
+      return '<tr><td class="num">' + fmt(r.at, true) + '</td><td><b>' + esc(r.name || '不明') + '</b></td><td>' + esc(r.org) + '</td>' +
+        '<td>' + esc(r.avatar) + '</td><td class="wrap">' + esc(r.text) + '</td><td class="near">' + esc(r.near) + '</td></tr>';
+    }).join('') : '<tr><td colspan="6" class="empty">' + (q ? '当てはまる記録はありません。' : 'まだ記録はありません。') + '</td></tr>';
+  }
+  $('talkQ').addEventListener('input', renderTalk);
+  function renderNotesAdmin(list){
+    $('notes').innerHTML = list.length ? list.map(function(r){
+      return '<tr><td class="num">' + fmt(r.at, true) + '</td><td><b>' + esc(r.name || '（記録なし）') + '</b></td><td>' + esc(r.org) + '</td>' +
+        '<td>' + esc(r.avatar) + '</td><td class="wrap">' + esc(r.t) + '</td><td class="num">' + esc(r.l) + '</td></tr>';
+    }).join('') : '<tr><td colspan="6" class="empty">まだ書き込みはありません。</td></tr>';
+  }
+
   function render(d){
     var now = d.now || Date.now();
+    lastTalk = d.talk || [];
+    renderTalk();
+    renderNotesAdmin(d.notes || []);
     $('asof').textContent = '最終更新 ' + fmt(now) + (d.viewer ? '（' + d.viewer + 'として表示）' : '');
     // いまいる人
     var pr = d.present || [];
