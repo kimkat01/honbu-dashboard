@@ -366,6 +366,9 @@
 var GAS_URL = "https://script.google.com/macros/s/AKfycbzMv_JWR14C--u-RAGDeNaz-Kfj321QJBwdj7bDzSKDCz7Sa06w0jyXzKkS3gQEZG6I/exec";
 
 var ST = { HONBU: '本部確認待ち', RIJICHO: '理事長確認待ち', DONE: '決裁済', BACK: '差戻し', REJECT: '却下' };
+// 表示上の呼び方（2026-11-11）：「却下」は画面では「要相談」と表示する。
+// データ（スプレッドシート・GAS）に保存する値は従来どおり「却下」のまま。
+function stLabel(s) { return s === '却下' ? '要相談' : (s == null ? '' : String(s)); }
 var ROLE_LABEL = { honbu: '法人本部', rijicho: '理事長' };
 var state = { key: '', role: '', items: [], tab: 'mine', q: '', current: null };
 
@@ -459,7 +462,7 @@ var TABS = [
   { id: 'mine',  label: function () { return 'あなたの確認待ち'; }, test: function (s) { return s === mineStatus(); } },
   { id: 'open',  label: function () { return '未処理すべて'; },     test: function (s) { return s === ST.HONBU || s === ST.RIJICHO; } },
   { id: 'back',  label: function () { return '差戻し中'; },         test: function (s) { return s === ST.BACK; } },
-  { id: 'closed',label: function () { return '完了（決裁済・却下）'; }, test: function (s) { return s === ST.DONE || s === ST.REJECT; } },
+  { id: 'closed',label: function () { return '完了（決裁済・要相談）'; }, test: function (s) { return s === ST.DONE || s === ST.REJECT; } },
   { id: 'all',   label: function () { return 'すべて'; },           test: function () { return true; } }
 ];
 
@@ -509,7 +512,7 @@ el('search').addEventListener('input', function () { state.q = this.value.trim()
 function badgeCls(s) {
   return { '本部確認待ち': 'b-honbu', '理事長確認待ち': 'b-rijicho', '決裁済': 'b-done', '差戻し': 'b-back', '却下': 'b-reject' }[s] || '';
 }
-function badge(s) { return '<span class="badge ' + badgeCls(s) + '">' + esc(s) + '</span>'; }
+function badge(s) { return '<span class="badge ' + badgeCls(s) + '">' + esc(stLabel(s)) + '</span>'; }
 function find(no) { return state.items.filter(function (i) { return String(i.appNo) === String(no); })[0]; }
 
 /* ======== 詳細 ======== */
@@ -517,14 +520,14 @@ function openDetail(it) {
   if (!it) return;
   state.current = it;
   el('dStatus').className = 'badge ' + badgeCls(it.status);
-  el('dStatus').textContent = it.status;
+  el('dStatus').textContent = stLabel(it.status);
   el('dNo').textContent = it.appNo;
   el('docPage').innerHTML = docHtml(it);
   el('dFiles').innerHTML = it.files && it.files.length
     ? it.files.map(function (f) { return '<a href="' + esc(f.url) + '" target="_blank" rel="noopener">📎 ' + esc(f.name) + '</a>'; }).join('')
     : '<span class="none">添付ファイルはありません</span>';
   el('dHist').innerHTML = (it.history || []).slice().reverse().map(function (h) {
-    return '<li><div><b>' + esc(h.role) + '</b>　' + esc(h.name || '') + '　<b>' + esc(h.action) + '</b></div>'
+    return '<li><div><b>' + esc(h.role) + '</b>　' + esc(h.name || '') + '　<b>' + esc(stLabel(h.action)) + '</b></div>'
       + '<div class="when">' + esc(fmtDateTime(h.at)) + '</div>'
       + (h.comment ? '<div class="cmt">' + esc(h.comment) + '</div>' : '') + '</li>';
   }).join('');
@@ -566,7 +569,7 @@ function renderAct(it) {
     else if (it.status === ST.RIJICHO) msg = '理事長の確認待ちです。';
     else if (it.status === ST.BACK) msg = '園長へ差し戻し中です。園長が修正して再申請すると、法人本部の確認待ちに戻ります。';
     else if (it.status === ST.DONE) msg = '法人本部・理事長の承認がそろい、決裁済みです。';
-    else msg = '却下されました。この申請の手続きは終了しています。';
+    else msg = '要相談となりました。この申請の手続きは終了しています。';
     box.innerHTML = '<h3>操作</h3><div class="act-note">' + esc(msg) + '</div>';
     return;
   }
@@ -576,11 +579,11 @@ function renderAct(it) {
     + '<input type="text" id="aName" value="' + esc(savedName) + '" placeholder="例）柴 明彦">'
     + '<div class="hint">氏名は承認印に入ります（次回から自動で入ります）</div>'
     + '<label for="aCmt">コメント</label>'
-    + '<textarea id="aCmt" placeholder="差戻し・却下のときは理由を必ず入力してください。承認のときは任意です。"></textarea>'
+    + '<textarea id="aCmt" placeholder="差戻し・要相談のときは理由を必ず入力してください。承認のときは任意です。"></textarea>'
     + '<div class="act-btns">'
     + '<button type="button" class="btn b-approve" data-d="承認">承認する</button>'
     + '<button type="button" class="btn b-sendback" data-d="差戻し">差戻し</button>'
-    + '<button type="button" class="btn b-rej" data-d="却下">却下</button>'
+    + '<button type="button" class="btn b-rej" data-d="却下">要相談</button>'
     + '</div>';
   Array.prototype.forEach.call(box.querySelectorAll('[data-d]'), function (b) {
     b.addEventListener('click', function () { decide(b.getAttribute('data-d')); });
@@ -592,11 +595,11 @@ function decide(d) {
   var name = el('aName').value.trim();
   var cmt = el('aCmt').value.trim();
   if (!name) { alert('承認者の氏名を入力してください'); el('aName').focus(); return; }
-  if (d !== '承認' && !cmt) { alert(d + 'の理由をコメント欄に入力してください'); el('aCmt').focus(); return; }
+  if (d !== '承認' && !cmt) { alert(stLabel(d) + 'の理由をコメント欄に入力してください'); el('aCmt').focus(); return; }
   var next = d === '承認'
     ? (state.role === 'honbu' ? '理事長の確認待ちに回ります。' : '決裁済みとなり、園長にメールで通知されます。')
     : (d === '差戻し' ? '園長に修正用リンク付きのメールが届き、修正後に再申請されます。' : 'この申請は終了し、園長にメールで通知されます。');
-  if (!confirm('「' + it.kenmei + '」を【' + d + '】します。\n' + next + '\nよろしいですか？')) return;
+  if (!confirm('「' + it.kenmei + '」を【' + stLabel(d) + '】します。\n' + next + '\nよろしいですか？')) return;
   try { localStorage.setItem('kessai_name_' + state.role, name); } catch (e) {}
 
   Array.prototype.forEach.call(el('actBox').querySelectorAll('button'), function (b) { b.disabled = true; });
@@ -631,7 +634,7 @@ function stampNow(it, d, name, cmt) {
   var mine = box && box.querySelector('.seal');
   if (mine) mine.classList.add('pon');
   el('dStatus').className = 'badge ' + badgeCls(p.status);
-  el('dStatus').textContent = p.status;
+  el('dStatus').textContent = stLabel(p.status);
 
   var note = document.createElement('div');
   note.className = 'act-saving';
@@ -691,7 +694,7 @@ function stamp(label, s) {
     seal = '<div class="seal"><span class="s1">' + (s.decision === '申請' ? '申請' : '承認') + '</span><span class="s2">' + esc(surname(s.name)) + '</span></div>';
     date = fmtDate(s.at);
   } else if (s.decision === '差戻し' || s.decision === '却下') {
-    seal = '<div class="seal gray"><span class="s1">' + esc(s.decision) + '</span><span class="s2">' + esc(surname(s.name)) + '</span></div>';
+    seal = '<div class="seal gray"><span class="s1">' + esc(stLabel(s.decision)) + '</span><span class="s2">' + esc(surname(s.name)) + '</span></div>';
     date = fmtDate(s.at);
   } else {
     seal = '<div class="seal-empty">未承認</div>';
