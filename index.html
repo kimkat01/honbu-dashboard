@@ -818,16 +818,39 @@
   <section>
     <div class="grid">
 
-      <!-- AIメンタルカウンセリング（2026-11-12、旧「しおどめひろば 入室状況」の場所）：ANSHIN KUN のAIメンタルカウンセリングの相談記録
+      <!-- AIメンタルカウンセリング（2026-11-12）：ANSHIN KUN のAIメンタルカウンセリングの相談記録
            スプレッドシート「AIカウンセリング記録」（cryk0289）のシート「記録」。日時・園・氏名・相談内容・AIの返答が残る
-           ※しおどめひろばは中止。過去データは「しおどめひろば」本体と保管コピー（【保管】しおどめひろば 記録）に残してある。
-             旧画面は archive/hiroba-monitor.html に移した -->
+           ※2026-11-12：AIメンタルカウンセリングは本番から外し、下の「ANSHIN KUN 試作版」で理事長に確認してもらう段階 -->
       <a class="card" href="https://docs.google.com/spreadsheets/d/10HjJ6hR9kzfbvuqsMGvtoxPEy9Cw4tcH4qO9INNBZeU/edit#gid=0" target="_blank" rel="noopener">
         <span class="pill warn">本部限定</span>
         <div class="icon c-teal">💬</div>
         <div class="title">AIメンタルカウンセリング</div>
         <div class="desc">いつ・どの園の誰が相談したか（日時・園・氏名・相談内容）</div>
       </a>
+
+      <!-- しおどめひろば 入室状況（2026-11-01）：ひろば（staff-dashboard/hiroba/）に、だれが・いつ・どのアバターで入ったかの一覧
+           （このリポジトリの hiroba-monitor.html）。記録は GAS「しおどめひろば 通信」（cryk0289）のシート「入室記録」にたまる。
+           本部アカウントでログインしたときだけ表示される。2026-11-04：会話と本音ボードも本人つきで表示
+           2026-11-12：いったん削除したが、おととい（11/10）の状態に戻した -->
+      <a class="card" href="hiroba-monitor.html" target="_blank" rel="noopener">
+        <span class="pill warn">本部限定</span>
+        <div class="icon c-teal">🐾</div>
+        <div class="title">しおどめひろば 入室状況</div>
+        <div class="desc">入室・話した言葉・本音ボードの記録（本名つき）</div>
+      </a>
+
+      <!-- ANSHIN KUN 試作版（2026-11-12）：本番の職員ダッシュボードに「しおどめの葉」（旧ご意見箱）と「AIメンタルカウンセリング」を
+           加えた試作版（staff-dashboard/shisaku.html、ふれあいは fureai-moriya-staff-dashboard/shisaku.html）をスマホ枠で開く。
+           理事長の承認をもらったら、試作版の中身を index.html に移して本番にする -->
+      <div class="card card-split" id="sdTrialCard">
+        <span class="pill warn">試作</span>
+        <div class="icon c-green">🧪</div>
+        <div class="title sd-title">ANSHIN KUN<small>（試作版）</small></div>
+        <label class="sd-pick" for="sdGardenTrial">
+          <span class="sd-pick-label">園</span>
+          <select class="sd-select" id="sdGardenTrial" aria-label="ANSHIN KUN 試作版：表示する園を選ぶ"></select>
+        </label>
+      </div>
 
     </div>
   </section>
@@ -1200,9 +1223,12 @@ document.querySelectorAll('.cam-select[data-cam]').forEach(function (sel) {
   var LAST_KEY = 'honbu_sd_garden';
   var gardens = (typeof GARDEN_MASTER !== 'undefined') ? GARDEN_MASTER : [];
 
-  function urlFor(key) { return (SPECIAL_URL[key] || BASE) + '?garden=' + encodeURIComponent(key) + '&view=honbu'; }
+  /* 2026-11-12：試作版（shisaku.html）も同じスマホ枠で開く。trial が true のあいだは試作版を表示する */
+  var trial = false;
+  function urlFor(key) { return (SPECIAL_URL[key] || BASE) + (trial ? 'shisaku.html' : '') + '?garden=' + encodeURIComponent(key) + '&view=honbu'; }
 
   var sel = document.getElementById('sdGarden');
+  var tSel = document.getElementById('sdGardenTrial');
   var modal = document.getElementById('sdPhone');
   var mSel = document.getElementById('sdPhoneGarden');
   var frame = document.getElementById('sdPhoneFrame');
@@ -1217,6 +1243,9 @@ document.querySelectorAll('.cam-select[data-cam]').forEach(function (sel) {
   buildOptions(sel);
   sel.insertAdjacentHTML('afterbegin', '<option value="" selected>園を選ぶ</option>');
   sel.value = '';
+  buildOptions(tSel);
+  tSel.insertAdjacentHTML('afterbegin', '<option value="" selected>園を選ぶ</option>');
+  tSel.value = '';
   buildOptions(mSel);
 
   var last = '';
@@ -1234,7 +1263,12 @@ document.querySelectorAll('.cam-select[data-cam]').forEach(function (sel) {
   sel.addEventListener('change', function () {
     var key = sel.value;
     sel.value = '';            // 次も同じ園を選べるよう、表示は「園を選ぶ…」に戻す
-    if (key) openPhone(key);
+    if (key) { trial = false; openPhone(key); }
+  });
+  tSel.addEventListener('change', function () {
+    var key = tSel.value;
+    tSel.value = '';
+    if (key) { trial = true; openPhone(key); }
   });
   mSel.addEventListener('change', function () { setGarden(mSel.value, true); });
 
