@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>柴学園・雄雅会｜17園ホームページ比較</title>
+<style>
+:root{font-family:-apple-system,BlinkMacSystemFont,"Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,sans-serif;color:#223344;background:#edf2f6;--navy:#183f60;--blue:#e6f2fa;--gap:40px}
+*{box-sizing:border-box}body{margin:0}button,input,textarea,select{font:inherit}button{cursor:pointer}header{background:#fff;border-bottom:1px solid #d9e4eb;padding:15px clamp(14px,3vw,40px);display:flex;gap:12px;align-items:center;flex-wrap:wrap;justify-content:space-between}h1{font-size:clamp(18px,2vw,25px);margin:0;color:#183f60}header p{margin:4px 0 0;font-size:12px;color:#77899a}.toolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.action{border:1px solid #b8cbd8;border-radius:9px;background:#fff;padding:9px 12px;color:#23435b;font-size:13px;font-weight:650}.action:hover{background:#e7f2f9}.action.primary{background:#184765;color:#fff;border-color:#184765}.action:disabled{opacity:.35;cursor:default}main{max-width:1800px;margin:auto;padding:18px 16px 32px}.controls{display:flex;align-items:center;justify-content:center;gap:14px;margin:0 auto 14px}.arrow{height:44px;width:46px;border:1px solid #c8d7e1;border-radius:12px;background:white;font-size:25px;line-height:1;color:#244d67}.counter{font-variant-numeric:tabular-nums;min-width:85px;text-align:center;font-weight:750;color:#34556c}.range{width:min(300px,30vw);accent-color:#225f85}.trackview{overflow:hidden;width:100%;touch-action:pan-y;cursor:grab}.trackview:active{cursor:grabbing}.track{display:flex;gap:var(--gap);transition:transform .4s cubic-bezier(.2,.7,.2,1);will-change:transform}.card{flex:0 0 auto;background:#fff;border:1px solid #d8e3eb;border-radius:16px;overflow:hidden;box-shadow:0 3px 14px #1b435313}.cardhead{padding:12px 14px;min-height:69px;display:flex;justify-content:space-between;align-items:center;gap:8px;background:#fff}.cardhead .org{font-size:10px;font-weight:800;letter-spacing:.08em;color:#7290a4}.cardhead h2{font-size:clamp(13px,1.1vw,17px);margin:4px 0 0;line-height:1.3}.cardhead a{font-size:12px;text-decoration:none;color:#14618d;background:#e9f3fa;padding:8px 9px;border-radius:8px;white-space:nowrap}.preview{position:relative;overflow:hidden;background:#f9fbfc;border-top:1px solid #e1e8ee;border-bottom:1px solid #e1e8ee;height:460px}.frame{position:absolute;top:0;left:0;transform-origin:top left;border:0;background:#fff}.preview-tip{position:absolute;bottom:9px;left:9px;padding:6px 9px;font-size:11px;background:#fffdf7ee;color:#65727e;border-radius:6px;pointer-events:none;box-shadow:0 1px 6px #0001}.note{padding:12px 14px 14px}.note label{display:block;font-size:12px;font-weight:800;margin-bottom:7px;color:#46647c}.note textarea{width:100%;min-height:87px;resize:vertical;border:1px solid #d6e1e8;padding:10px;border-radius:9px;outline-color:#4184a9;line-height:1.55;font-size:14px}.foot{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-top:7px;font-size:11px;color:#8b9aa7}.tiny{font-size:11px;color:#698394}.guide{max-width:1100px;margin:18px auto 0;font-size:12px;line-height:1.8;color:#728596;text-align:center}.bottomnav{display:none}.overlay{display:none}.movebtn{display:none}.modal{position:fixed;inset:0;z-index:20;background:#112333e8;padding:20px;display:none;flex-direction:column}.modal.open{display:flex}.modalbar{display:flex;align-items:center;justify-content:space-between;color:white;gap:10px;padding:0 0 12px}.modal iframe{flex:1;width:100%;background:white;border:0;border-radius:9px}.modal .action{flex:none}
+@media(min-width:701px){.card{width:calc((100% - var(--gap))/2)}}
+@media(max-width:700px){:root{--gap:20px}header{padding:13px 14px}h1{font-size:19px}header p{font-size:11px}.toolbar{width:100%;justify-content:flex-start}.action{font-size:12px;padding:8px 10px}main{padding:10px 11px 100px}.trackview{touch-action:pan-y}.card{width:100%;border-radius:13px}.cardhead{min-height:66px;padding:11px}.cardhead h2{font-size:14px}.cardhead a{font-size:11px}.preview{height:540px}.note{padding:10px 11px}.note textarea{min-height:100px}.controls{gap:10px;margin-bottom:11px}.range{width:min(150px,36vw)}.arrow{height:40px;width:44px}.guide{padding:0 8px;font-size:11px}.bottomnav{display:flex;position:fixed;bottom:0;left:0;right:0;z-index:5;background:#ffffffee;backdrop-filter:blur(12px);border-top:1px solid #dbe5ed;padding:10px max(12px,env(safe-area-inset-left)) calc(10px + env(safe-area-inset-bottom));align-items:center;justify-content:space-between;gap:10px;box-shadow:0 -5px 15px #0000000b}.bottomnav button{flex:1;min-height:42px}.bottomnav .counter{min-width:70px}.movebtn{display:block;font-size:11px;background:#edf6fc;border:1px solid #bdd6e6;border-radius:7px;padding:6px 8px;color:#285775}.overlay.active{display:block;position:absolute;inset:0;z-index:2;background:transparent;touch-action:pan-y;cursor:grab}.overlay.active::after{content:'左右にスワイプして園を切り替え';position:absolute;top:12px;left:50%;transform:translateX(-50%);white-space:nowrap;pointer-events:none;background:#183f60d9;color:#fff;border-radius:20px;padding:7px 12px;font-size:11px}.preview-tip{display:none}}
+</style>
+</head>
+<body>
+<header><div><h1>柴学園・雄雅会｜17園 HP比較</h1><p>2園を横並びで比較／矢印・スライダーで1園ずつ移動／コメント自動保存</p></div><div class="toolbar"><button class="action" id="csv">コメントCSV出力</button><button class="action" id="resetNotes">コメント全消去</button><button class="action" id="resetOrder">並び順を初期化</button></div></header>
+<main><nav class="controls" aria-label="ページ操作"><button class="arrow" id="prev" aria-label="前の園">‹</button><span class="counter" id="counter">1 / 17</span><input class="range" id="slider" type="range" min="1" max="17" value="1" aria-label="園を選ぶ"><button class="arrow" id="next" aria-label="次の園">›</button></nav><div class="trackview" id="viewport"><div class="track" id="track"></div></div><p class="guide">各園のPCホームページを2園ずつ横並びで表示します。左右の矢印またはスライダーで1園ずつ移動できます。コメントは自動保存され、CSVで出力できます。サイト側で埋め込みを制限している場合は「HPを開く」から確認してください。</p></main>
+<nav class="bottomnav" aria-label="スマホページ操作"><button class="action" id="mobilePrev">‹ 前の園</button><span class="counter" id="mobileCounter">1 / 17</span><button class="action primary" id="mobileNext">次の園 ›</button></nav>
+<div class="modal" id="modal"><div class="modalbar"><strong id="modalName">拡大表示</strong><button class="action" id="closeModal">閉じる ×</button></div><iframe id="modalFrame" title="拡大プレビュー"></iframe></div>
+<script>
+// 公式の施設一覧を基準とした初期配列。必要に応じてこの配列の順番を変更できます。
+const DEFAULT=[
+['S01','認定こども園しおどめの森','https://www.gakuhou-shibagakuen.com/mori'],
+['S02','しおどめ保育園八潮駅北','https://www.gakuhou-shibagakuen.com/ekikita'],
+['S03','しおどめ保育園京急蒲田駅前','https://www.gakuhou-shibagakuen.com/kamata'],
+['S04','しおどめ保育園小規模認可','https://www.gakuhou-shibagakuen.com/sho'],
+['S05','しおどめ保育園江戸川中央','https://www.gakuhou-shibagakuen.com/edogawa'],
+['S06','しおどめ保育園春日部','https://www.gakuhou-shibagakuen.com/kasukabe'],
+['S07','しおどめ保育園越谷','https://www.gakuhou-shibagakuen.com/koshigaya'],
+['S08','しおどめ保育園八潮茜町','https://www.gakuhou-shibagakuen.com/yashioakane'],
+['S09','ふれあいしおどめ保育園','https://www.gakuhou-shibagakuen.com/shinfureai'],
+['S10','しおどめ保育園稲城','https://www.gakuhou-shibagakuen.com/しおどめ保育園稲城'],
+['S11','しおどめ保育園つくば','https://www.gakuhou-shibagakuen.com/st'],
+['S12','しおどめ保育園久喜','https://www.gakuhou-shibagakuen.com/shinkuki'],
+['S13','しおどめ保育園三郷中央','https://www.gakuhou-shibagakuen.com/しおどめ保育園三郷中央'],
+['S14','ふれあいしおどめ保育園八潮','https://www.gakuhou-shibagakuen.com/fureaiyashio'],
+['Y01','八潮しおどめ保育園','https://www.yugakai.org/yashio'],
+['Y02','守谷しおどめ保育園','https://www.yugakai.org/shinmoriyashiodome'],
+['Y03','しおどめなかよし保育園','https://www.yugakai.org/shiodome-nakayoshi']
+];
+const noteKey='shio17_notes_v3',orderKey='shio17_order_v3';
+function readJSON(k, fallback){try{return JSON.parse(localStorage.getItem(k))??fallback}catch{return fallback}}
+const notes=readJSON(noteKey,{});let order=readJSON(orderKey,DEFAULT.map(x=>x[0]));if(!Array.isArray(order)||order.length!==17||DEFAULT.some(x=>!order.includes(x[0])))order=DEFAULT.map(x=>x[0]);
+let sites=order.map(id=>DEFAULT.find(x=>x[0]===id));let current=0;const viewport=document.querySelector('#viewport'),track=document.querySelector('#track');const frames=[];
+function createCards(){track.replaceChildren();frames.length=0;sites.forEach(([id,name,url],i)=>{let card=document.createElement('article');card.className='card';card.dataset.id=id;card.innerHTML=`<div class="cardhead"><div><div class="org">${id.startsWith('S')?'学校法人 柴学園':'社会福祉法人 雄雅会'}　${id}</div><h2></h2></div><div style="display:flex;align-items:center;gap:6px"><button class="movebtn" type="button" aria-pressed="true">スワイプ移動 ON</button><a href="${encodeURI(url)}" target="_blank" rel="noopener noreferrer">HPを開く ↗</a></div></div><div class="preview"><iframe class="frame" loading="lazy" title="${name}のホームページ" referrerpolicy="strict-origin-when-cross-origin"></iframe><div class="overlay active" aria-label="スワイプで次の園へ"></div><span class="preview-tip">プレビューは画面に合わせて縮小しています</span></div><div class="note"><label for="note-${id}">改善点・確認コメント</label><textarea id="note-${id}" placeholder="気づいた点や変更案を入力"></textarea><div class="foot"><span>自動保存</span><span>${i+1} / ${sites.length}</span></div></div>`;card.querySelector('h2').textContent=name;const ta=card.querySelector('textarea');ta.value=notes[id]||'';ta.addEventListener('input',()=>{notes[id]=ta.value;localStorage.setItem(noteKey,JSON.stringify(notes))});let fr=card.querySelector('iframe');fr.dataset.url=url;frames.push(fr);let overlay=card.querySelector('.overlay'),toggle=card.querySelector('.movebtn');toggle.addEventListener('click',()=>{let on=overlay.classList.toggle('active');toggle.textContent='スワイプ移動 '+(on?'ON':'OFF');toggle.setAttribute('aria-pressed',String(on));});track.append(card);});setTimeout(layout,50)}
+function visibleCount(){return matchMedia('(max-width:700px)').matches?1:2}
+function layout(){
+ const compact=matchMedia('(max-width:700px)').matches;
+ const w=viewport.clientWidth;
+ const gap=parseFloat(getComputedStyle(track).gap)||40;
+ const cardWidth=compact?w:(w-gap)/2;
+ const phonePreview=document.body.classList.contains('mode-smartphone');
+ track.querySelectorAll('.card').forEach(card=>{
+   card.style.width=cardWidth+'px';
+   const p=card.querySelector('.preview');
+   const f=card.querySelector('iframe');
+   const sourceWidth=1366;
+   const scale=cardWidth/sourceWidth;
+   const visibleHeight=Math.max(410,Math.min(660,1366*scale));
+   p.style.height=visibleHeight+'px';
+   f.style.width=sourceWidth+'px';
+   f.style.height=(visibleHeight/scale)+'px';
+   f.style.left='0';
+   f.style.top='0';
+   f.style.transform=`scale(${scale})`;
+   f.style.border='0';
+ });
+ setPosition(false);loadAround();
+}
+function loadAround(){for(let i=Math.max(0,current-1);i<Math.min(sites.length,current+visibleCount()+2);i++){let f=frames[i];if(f&&!f.src)f.src=encodeURI(f.dataset.url)}}
+function setPosition(animated=true){const w=viewport.clientWidth,gap=parseFloat(getComputedStyle(track).gap)||40,cardW=visibleCount()===1?w:(w-gap)/2;track.style.transition=animated?'transform .4s cubic-bezier(.2,.7,.2,1)':'none';track.style.transform=`translateX(-${current*(cardW+gap)}px)`;let num=current+1;document.querySelector('#counter').textContent=`${num} / ${sites.length}`;document.querySelector('#mobileCounter').textContent=`${num} / ${sites.length}`;document.querySelector('#slider').value=num;document.querySelector('#prev').disabled=current===0;document.querySelector('#next').disabled=current===sites.length-1;document.querySelector('#mobilePrev').disabled=current===0;document.querySelector('#mobileNext').disabled=current===sites.length-1;}
+function go(i){current=Math.max(0,Math.min(sites.length-1,i));setPosition();loadAround()}
+document.querySelector('#prev').onclick=()=>go(current-1);document.querySelector('#next').onclick=()=>go(current+1);document.querySelector('#mobilePrev').onclick=()=>go(current-1);document.querySelector('#mobileNext').onclick=()=>go(current+1);document.querySelector('#slider').oninput=e=>go(+e.target.value-1);
+addEventListener('keydown',e=>{if(/TEXTAREA|INPUT/.test(document.activeElement?.tagName)||document.querySelector('#modal').classList.contains('open'))return;if(e.key==='ArrowLeft')go(current-1);if(e.key==='ArrowRight')go(current+1)});
+let start=null;viewport.addEventListener('touchstart',e=>{if(e.target.closest('textarea,button,a'))return;if(e.target.closest('.preview')&&!e.target.closest('.overlay.active'))return;start={x:e.touches[0].clientX,y:e.touches[0].clientY}}, {passive:true});viewport.addEventListener('touchend',e=>{if(!start)return;let dx=e.changedTouches[0].clientX-start.x,dy=e.changedTouches[0].clientY-start.y;if(Math.abs(dx)>55&&Math.abs(dx)>Math.abs(dy)*1.4)go(current+(dx<0?1:-1));start=null},{passive:true});
+let mouse=null;viewport.addEventListener('pointerdown',e=>{if(e.pointerType!=='mouse'||e.target.closest('textarea,button,a'))return;mouse=e.clientX});viewport.addEventListener('pointerup',e=>{if(mouse===null)return;let d=e.clientX-mouse;if(Math.abs(d)>75)go(current+(d<0?1:-1));mouse=null});
+window.addEventListener('resize',()=>requestAnimationFrame(layout));
+document.querySelector('#csv').onclick=()=>{const esc=s=>'"'+String(s??'').replaceAll('"','""')+'"';const rows=[['番号','法人','施設名','URL','コメント'],...sites.map(([id,name,url])=>[id,id[0]==='S'?'柴学園':'雄雅会',name,url,notes[id]||''])];let data='\ufeff'+rows.map(r=>r.map(esc).join(',')).join('\r\n');const a=document.createElement('a');let u=URL.createObjectURL(new Blob([data],{type:'text/csv;charset=utf-8'}));a.href=u;a.download='17園HP比較コメント.csv';a.click();setTimeout(()=>URL.revokeObjectURL(u),1000)};
+document.querySelector('#resetNotes').onclick=()=>{if(!confirm('すべてのコメントを消去しますか？'))return;Object.keys(notes).forEach(k=>delete notes[k]);localStorage.removeItem(noteKey);track.querySelectorAll('textarea').forEach(t=>t.value='')};
+document.querySelector('#resetOrder').onclick=()=>{if(!confirm('施設の並び順を初期状態に戻しますか？'))return;localStorage.removeItem(orderKey);order=DEFAULT.map(x=>x[0]);sites=DEFAULT.slice();current=0;createCards()};
+createCards();
+</script>
+</body></html>
