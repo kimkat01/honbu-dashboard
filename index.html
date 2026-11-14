@@ -393,6 +393,8 @@
   /* 2026-11-01：カード名を1行に収める（2行になるとプルダウンが下で切れていたため） */
   .card .sd-title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .card .sd-title small { font-size: 12px; font-weight: 700; }
+  /* 試作版の3カード（ANSHIN KUN・ポータルサイト・AIメンタルカウンセリング）の「（試作版）」をピンクに（2026-11-14） */
+  .card .title small.trial-tag { font-size: 12px; font-weight: 700; color: #e6338a; }
   .card .sd-pick {
     flex-shrink: 0;
     margin-top: auto;
@@ -835,7 +837,7 @@
       <a class="card" href="https://docs.google.com/spreadsheets/d/10HjJ6hR9kzfbvuqsMGvtoxPEy9Cw4tcH4qO9INNBZeU/edit#gid=0" target="_blank" rel="noopener">
         <span class="pill warn">本部限定</span>
         <div class="icon c-teal">💬</div>
-        <div class="title">AIメンタルカウンセリング</div>
+        <div class="title">AIメンタルカウンセリング<small class="trial-tag">（試作版）</small></div>
         <div class="desc">いつ・どの園の誰が相談したか（日時・園・氏名・相談内容）</div>
       </a>
 
@@ -845,7 +847,7 @@
       <div class="card card-split" id="sdTrialCard">
         <span class="pill warn">試作</span>
         <div class="icon c-green">🧪</div>
-        <div class="title sd-title">ANSHIN KUN<small>（試作版）</small></div>
+        <div class="title sd-title">ANSHIN KUN<small class="trial-tag">（試作版）</small></div>
         <label class="sd-pick" for="sdGardenTrial">
           <span class="sd-pick-label">園</span>
           <select class="sd-select" id="sdGardenTrial" aria-label="ANSHIN KUN 試作版：表示する園を選ぶ"></select>
@@ -858,7 +860,7 @@
       <a class="card" href="https://kimkat01.github.io/shiodome-knowledge/shisaku.html?garden=honbu" target="_blank" rel="noopener">
         <span class="pill warn">試作</span>
         <div class="icon c-purple">🧪</div>
-        <div class="title sd-title">ポータルサイト<small>（試作版）</small></div>
+        <div class="title sd-title">ポータルサイト<small class="trial-tag">（試作版）</small></div>
         <div class="desc">本番に上げる前の新機能を確認する検証用ページ</div>
       </a>
 
