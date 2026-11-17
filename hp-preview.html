@@ -1,0 +1,339 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>各園HP｜本部ダッシュボード</title>
+<!--
+  各園HP（2026-11-17 新設）
+  ・本部ダッシュボード（index.html）左の「各園HP」から ?garden=園コード（S01〜Y03）で開く
+  ・1画面1園：①PC版（実際のHPを枠の中に表示） ②スマホ版（hp-sp/園コード.jpg の撮影画像） ③閲覧数（GA4）
+  ・園の正式名・園キーは staff-dashboard/gardens.js（GARDEN_MASTER）から取る
+  ・閲覧数はポータルサイトと同じGAS（HP_STATS_URL）から読む
+  ・スマホ版の画像は 2026-11-16 撮影。HPを更新したら hp-sp/ の画像を撮り直して差し替える
+  ・本部ダッシュボードにログインしたブラウザ（7日以内）だけで開ける
+-->
+<style>
+:root{--page:#e4e5e6;--bg:#f6f7f9;--card:#fff;--ink:#111;--sub:#555;--line:#e2e5ea;--acc:#e0457b;--accbg:#fdeef3;--acc2:#f4b6cb;--mute:#9aa1ab;--side:#fff}
+@media (prefers-color-scheme:dark){:root{--page:#0f1013;--bg:#15171b;--card:#1e2126;--ink:#eceef1;--sub:#a9afb8;--line:#30343b;--acc:#ff7aa6;--accbg:#3a2230;--acc2:#7a3b52;--mute:#6b727c;--side:#1a1c20}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--page);color:var(--ink);font-family:"Hiragino Sans","Yu Gothic UI","Meiryo",sans-serif;font-size:15px;line-height:1.5}
+.top{display:flex;align-items:center;gap:12px;padding:10px 18px;background:var(--card);border-bottom:1px solid var(--line)}
+.top h1{font-size:18px;margin:0}
+.top .back{margin-left:auto;font-size:13px;color:var(--sub);text-decoration:none}
+.top .back:hover{color:var(--acc)}
+.app{display:grid;grid-template-columns:190px minmax(0,1fr);min-height:calc(100vh - 50px)}
+.side{background:var(--side);border-right:1px solid var(--line);padding:12px 10px;overflow:auto}
+.grp{font-size:12px;color:var(--mute);margin:12px 6px 4px}
+.grp:first-child{margin-top:0}
+.side button{display:block;width:100%;text-align:left;border:0;background:none;color:var(--ink);font-size:14px;padding:6px 10px;border-radius:6px;cursor:pointer;font-family:inherit}
+.side button:hover{background:var(--accbg)}
+.side button.on{background:var(--acc);color:#fff;font-weight:700}
+.main{padding:16px 18px 40px;min-width:0}
+.ghead{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px 14px;margin-bottom:12px}
+.ghead h2{margin:0;font-size:22px}
+.ghead .corp{font-size:13px;color:var(--sub)}
+.ghead .sp{flex:1}
+.btn{border:1px solid var(--line);background:var(--card);color:var(--ink);padding:6px 14px;border-radius:6px;font-size:14px;cursor:pointer;text-decoration:none;font-family:inherit}
+.btn.pri{background:var(--acc);border-color:var(--acc);color:#fff}
+.lbl{font-size:13px;font-weight:700;color:var(--sub);margin:0 0 6px;display:flex;align-items:center;gap:6px}
+.lbl .num{display:inline-flex;width:20px;height:20px;border-radius:50%;background:var(--acc);color:#fff;font-size:12px;align-items:center;justify-content:center}
+.row1{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:16px;margin-bottom:18px}
+.pc{background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.pcbar{display:flex;align-items:center;gap:6px;padding:7px 10px;background:var(--bg);border-bottom:1px solid var(--line)}
+.pcbar i{width:10px;height:10px;border-radius:50%;background:#e4e6ea;display:block}
+.pcbar .url{flex:1;margin-left:8px;background:var(--card);border:1px solid var(--line);border-radius:12px;font-size:12px;color:var(--sub);padding:2px 10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pcview{position:relative;overflow:hidden;height:420px;background:#fff}
+.pcview iframe{position:absolute;top:0;left:0;width:1280px;height:840px;border:0;transform-origin:0 0;background:#fff}
+.phonewrap{display:flex;justify-content:center}
+.phone{width:262px;height:520px;border:10px solid #222;border-radius:34px;overflow:hidden;position:relative;background:#fff}
+.phone .scroll{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;scrollbar-width:thin}
+.phone img{display:block;width:100%;height:auto}
+.phone .noimg{padding:40px 16px;text-align:center;font-size:13px;color:#777}
+.ptools{display:flex;justify-content:center;gap:6px;margin-top:10px}
+.ptools .btn{font-size:12px;padding:4px 10px}
+.note{font-size:12px;color:var(--mute);margin-top:6px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px}
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:14px}
+.kpi{border:1px solid var(--line);border-radius:12px;padding:12px 14px;background:color-mix(in srgb,var(--accbg) 40%,var(--card));min-width:0}
+.kpi .t{font-size:13px;font-weight:700}
+.kpi .v{font-size:30px;font-weight:700;line-height:1.2}
+.kpi .v small{font-size:14px}
+.kpi .s{font-size:12px;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kpi svg{display:block;width:100%;height:56px;margin:4px 0}
+.bar2{height:10px;border-radius:5px;background:var(--acc2);overflow:hidden;margin:16px 0 8px;display:flex}
+.bar2 b{display:block;height:100%;background:var(--acc)}
+.cols2{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:16px}
+h3{font-size:15px;margin:0 0 8px}
+.chart{border:1px solid var(--line);border-radius:10px;padding:8px}
+.chart svg{display:block;width:100%;height:180px}
+.rank{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1.5fr) 50px;gap:8px 10px;align-items:center;font-size:14px}
+.rank .nm{border-bottom:2px dotted var(--acc2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--ink);text-decoration:none}
+.rank a.nm:hover{color:var(--acc)}
+.rank .b{display:block;height:12px;border-radius:6px;background:linear-gradient(90deg,#f08a4b,var(--acc))}
+.rank .c{text-align:right;font-weight:700}
+.msg{padding:18px;text-align:center;color:var(--sub);font-size:14px}
+.warn{display:inline-block;background:#fff3cd;color:#7a5300;border:1px solid #f0d58a;border-radius:8px;padding:6px 10px;font-size:12.5px;font-weight:700;margin-bottom:12px}
+.foot{font-size:12px;color:var(--sub);border-top:1px dashed var(--line);margin-top:14px;padding-top:10px}
+#gate{display:none;max-width:460px;margin:80px auto;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:28px;text-align:center}
+#gate h2{margin:0 0 8px;font-size:18px}
+#gate p{font-size:14px;color:var(--sub);margin:0 0 18px}
+@media (max-width:1000px){.row1{grid-template-columns:1fr}.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.cols2{grid-template-columns:1fr}}
+@media (max-width:700px){.app{grid-template-columns:1fr}.side{border-right:0;border-bottom:1px solid var(--line);display:grid;grid-template-columns:repeat(3,1fr);gap:2px}.grp{grid-column:1/-1}}
+</style>
+<script src="https://kimkat01.github.io/staff-dashboard/gardens.js"></script>
+</head>
+<body>
+<div class="top"><h1>各園HP</h1><a class="back" href="./">← 本部ダッシュボード</a></div>
+
+<div id="gate">
+  <h2>本部ダッシュボードからお入りください</h2>
+  <p>このページは本部専用です。本部ダッシュボードにログインしてから、左の「各園HP」で園を選んでください。</p>
+  <a class="btn pri" id="gateLink" href="./">本部ダッシュボードへ</a>
+</div>
+
+<div class="app" id="app">
+  <nav class="side" id="side" aria-label="各園HP"></nav>
+  <main class="main">
+    <div class="ghead">
+      <h2 id="gName"></h2><span class="corp" id="gCorp"></span><span class="sp"></span>
+      <a class="btn pri" id="openHp" href="#" target="_blank" rel="noopener">HPを新しいタブで開く ↗</a>
+    </div>
+
+    <div class="row1">
+      <div>
+        <p class="lbl"><span class="num">1</span>PC版</p>
+        <div class="pc">
+          <div class="pcbar"><i></i><i></i><i></i><span class="url" id="pcUrl"></span></div>
+          <div class="pcview" id="pcView"><iframe id="pcFrame" title="PC版" loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe></div>
+        </div>
+      </div>
+      <div>
+        <p class="lbl"><span class="num">2</span>スマホ版</p>
+        <div class="phonewrap"><div class="phone"><div class="scroll" id="spScroll"><img id="spImg" alt=""></div></div></div>
+        <div class="ptools"><button class="btn" data-s="top">▲ 先頭へ</button><button class="btn" data-s="up">↑ 上へ</button><button class="btn" data-s="down">↓ 下へ</button></div>
+        <div class="note" style="text-align:center">枠の中はマウスのホイールでスクロールできます</div>
+      </div>
+    </div>
+
+    <p class="lbl"><span class="num">3</span>閲覧数　<span style="font-weight:400" id="upd"></span></p>
+    <div class="card" id="stats"><div class="msg">読み込み中…</div></div>
+    <p class="note">※ スマホ版は 2026年11月16日 時点に撮影した画像です（リンクは押せません）。HPを更新した後は撮り直しが必要です。</p>
+  </main>
+</div>
+
+<script>
+(function(){
+  // ---- 本部ダッシュボードにログイン済みか（index.html がログイン時に記録する目印。7日間有効） ----
+  var VIEW_DAYS = 7;
+  var okView = false;
+  try { var t = Number(localStorage.getItem('sd_honbu_viewer') || 0); okView = t && (Date.now() - t) < VIEW_DAYS * 86400000; } catch(e) {}
+  if(!okView){
+    document.getElementById('app').style.display = 'none';
+    document.getElementById('gate').style.display = 'block';
+    var here = 'hp-preview.html' + location.search;
+    document.getElementById('gateLink').href = './?next=' + encodeURIComponent(here);
+    return;
+  }
+
+  // ★ 閲覧数のGAS（ポータルサイトのHP閲覧数と同じもの）
+  var HP_STATS_URL = 'https://script.google.com/macros/s/AKfycbyoGr-hSHgvvOh0qDxsEcTq4An-9bjU54HCXvgZLdrwC8zquTr3cwT_jUuO3fHdQvfAxA/exec';
+
+  // ★ メニュー名（短い表記）と各園HPのアドレス。正式名・園キーは gardens.js から
+  var SITES = {
+    S01:{ short:'しおどめの森',   url:'https://www.gakuhou-shibagakuen.com/mori' },
+    S02:{ short:'八潮駅北',       url:'https://www.gakuhou-shibagakuen.com/ekikita' },
+    S03:{ short:'京急蒲田駅前',   url:'https://www.gakuhou-shibagakuen.com/kamata' },
+    S04:{ short:'小規模認可',     url:'https://www.gakuhou-shibagakuen.com/sho' },
+    S05:{ short:'江戸川中央',     url:'https://www.gakuhou-shibagakuen.com/edogawa' },
+    S06:{ short:'春日部',         url:'https://www.gakuhou-shibagakuen.com/kasukabe' },
+    S07:{ short:'越谷',           url:'https://www.gakuhou-shibagakuen.com/koshigaya' },
+    S08:{ short:'八潮茜町',       url:'https://www.gakuhou-shibagakuen.com/yashioakane' },
+    S09:{ short:'ふれあい守谷',   url:'https://www.gakuhou-shibagakuen.com/shinfureai' },
+    S10:{ short:'つくば',         url:'https://www.gakuhou-shibagakuen.com/st' },
+    S11:{ short:'稲城',           url:'https://www.gakuhou-shibagakuen.com/しおどめ保育園稲城' },
+    S12:{ short:'久喜',           url:'https://www.gakuhou-shibagakuen.com/shinkuki' },
+    S13:{ short:'三郷中央',       url:'https://www.gakuhou-shibagakuen.com/しおどめ保育園三郷中央' },
+    S14:{ short:'ふれあい八潮',   url:'https://www.gakuhou-shibagakuen.com/fureaiyashio' },
+    Y01:{ short:'八潮しおどめ',   url:'https://www.yugakai.org/yashio' },
+    Y02:{ short:'守谷しおどめ',   url:'https://www.yugakai.org/shinmoriyashiodome' },
+    Y03:{ short:'なかよし',       url:'https://www.yugakai.org/shiodome-nakayoshi' }
+  };
+  var MASTER = (typeof GARDEN_MASTER !== 'undefined') ? GARDEN_MASTER : [];
+  var GARDENS = MASTER.filter(function(g){ return SITES[g.code]; }).map(function(g){
+    return { code:g.code, key:g.key, full:g.name, short:SITES[g.code].short, url:SITES[g.code].url,
+             corp: /^Y/.test(g.code) ? '社会福祉法人雄雅会' : '学校法人柴学園' };
+  });
+
+  function css(v){ return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); }
+  function fmt(n){ return (n == null || isNaN(n)) ? '—' : Number(n).toLocaleString('ja-JP'); }
+  function esc(t){ return String(t == null ? '' : t).replace(/[<>&"]/g, function(c){ return {'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]; }); }
+  function md(d){ return Number(d.slice(5, 7)) + '/' + Number(d.slice(8, 10)); }
+
+  // ---- 左メニュー ----
+  var side = document.getElementById('side'), lastCorp = '';
+  GARDENS.forEach(function(g, i){
+    if(g.corp !== lastCorp){ var d = document.createElement('div'); d.className = 'grp'; d.textContent = g.corp; side.appendChild(d); lastCorp = g.corp; }
+    var b = document.createElement('button'); b.type = 'button'; b.textContent = g.short; b.dataset.i = i;
+    b.onclick = function(){ show(i, true); }; side.appendChild(b);
+  });
+
+  // ---- PC版の枠（1280px幅のページを縮小して表示） ----
+  function fitPc(){
+    var v = document.getElementById('pcView'), f = document.getElementById('pcFrame'), s = v.clientWidth / 1280;
+    f.style.transform = 'scale(' + s + ')'; v.style.height = (840 * s) + 'px';
+  }
+  addEventListener('resize', fitPc);
+
+  // ---- スマホ版のスクロールボタン ----
+  document.querySelectorAll('.ptools button').forEach(function(b){
+    b.onclick = function(){
+      var sc = document.getElementById('spScroll'), h = sc.clientHeight * 0.85;
+      if(b.dataset.s === 'top') sc.scrollTo({ top:0, behavior:'smooth' });
+      else sc.scrollBy({ top: b.dataset.s === 'up' ? -h : h, behavior:'smooth' });
+    };
+  });
+
+  // ---- グラフ ----
+  function svgBars(el, vals, opt){
+    opt = opt || {};
+    var W = el.clientWidth || 300, H = el.clientHeight || 56, n = vals.length, max = Math.max.apply(null, vals.concat([1]));
+    var pad = opt.axis ? 30 : 2, bw = (W - pad - 4) / Math.max(n, 1), s = '';
+    if(opt.axis){
+      [0, .5, 1].forEach(function(t){ var y = H - 18 - (H - 26) * t;
+        s += '<line x1="' + pad + '" x2="' + W + '" y1="' + y + '" y2="' + y + '" stroke="' + css('--line') + '"/>' +
+             '<text x="' + (pad - 4) + '" y="' + (y + 4) + '" font-size="10" text-anchor="end" fill="' + css('--sub') + '">' + Math.round(max * t) + '</text>'; });
+    }
+    vals.forEach(function(v, k){
+      var h = (H - (opt.axis ? 26 : 4)) * v / max, x = pad + k * bw + bw * .18, y = H - (opt.axis ? 18 : 2) - h;
+      s += '<rect x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" width="' + (bw * .64).toFixed(1) + '" height="' + Math.max(h, 1.5).toFixed(1) +
+           '" rx="2" fill="' + (k === n - 1 ? css('--acc') : css('--acc2')) + '">' + (opt.titles ? '<title>' + opt.titles[k] + '</title>' : '') + '</rect>';
+    });
+    if(opt.labels) opt.labels.forEach(function(t, k){ if(t) s += '<text x="' + (pad + k * bw + bw / 2).toFixed(1) + '" y="' + (H - 3) + '" font-size="10" text-anchor="middle" fill="' + css('--sub') + '">' + t + '</text>'; });
+    el.setAttribute('viewBox', '0 0 ' + W + ' ' + H); el.innerHTML = s;
+  }
+  function svgLine(el, vals){
+    var W = el.clientWidth || 300, H = el.clientHeight || 56, max = Math.max.apply(null, vals.concat([1])), n = vals.length;
+    if(!n){ el.innerHTML = ''; return; }
+    var pts = vals.map(function(v, k){ return (4 + (n > 1 ? k * (W - 8) / (n - 1) : 0)).toFixed(1) + ',' + (H - 4 - (H - 10) * v / max).toFixed(1); });
+    var last = pts[pts.length - 1].split(',');
+    el.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+    el.innerHTML = '<polyline points="' + pts.join(' ') + '" fill="none" stroke="' + css('--acc') + '" stroke-width="2"/><circle cx="' + last[0] + '" cy="' + last[1] + '" r="3.5" fill="' + css('--acc') + '"/>';
+  }
+  function svgDonut(el, p){
+    var r = 20, c = 2 * Math.PI * r;
+    el.innerHTML = '<circle cx="50" cy="28" r="' + r + '" fill="none" stroke="' + css('--acc2') + '" stroke-width="9"/>' +
+      (p == null ? '' : '<circle cx="50" cy="28" r="' + r + '" fill="none" stroke="' + css('--acc') + '" stroke-width="9" stroke-dasharray="' + (c * p / 100) + ' ' + c + '" transform="rotate(-90 50 28)"/>');
+  }
+
+  // ---- 閲覧数（GAS） ----
+  var cache = {}, cur = -1;
+  function loadStats(g){
+    if(cache[g.code]) return Promise.resolve(cache[g.code]);
+    return fetch(HP_STATS_URL + '?action=hpStats&garden=' + encodeURIComponent(g.key) + '&code=' + encodeURIComponent(g.code) + '&name=' + encodeURIComponent(g.full))
+      .then(function(r){ return r.json(); })
+      .then(function(j){ if(!j) throw new Error('empty'); cache[g.code] = j; return j; })
+      .catch(function(){ return { ok:false, message:'閲覧数を読み込めませんでした。時間をおいて開き直してください。', retry:true }; });
+  }
+  var STATS_HTML =
+    '<div class="kpis">' +
+      '<div class="kpi"><div class="t">今日の閲覧数</div><div class="v" id="kToday"></div><svg id="sv7"></svg><div class="s">直近7日（右端が今日）</div></div>' +
+      '<div class="kpi"><div class="t">今月の閲覧数</div><div class="v" id="kMonth"></div><svg id="svCum"></svg><div class="s" id="kMonthS">今月の積み上げ</div></div>' +
+      '<div class="kpi"><div class="t">今月の訪問者数</div><div class="v" id="kVis"></div><div class="bar2" id="visBar"></div><div class="s" id="visTxt"></div></div>' +
+      '<div class="kpi"><div class="t">スマホから見た人</div><div class="v" id="kSp"></div><svg id="svDonut" viewBox="0 0 100 56"></svg><div class="s">● スマホ ● PC・タブレット</div></div>' +
+    '</div>' +
+    '<div class="cols2">' +
+      '<div><h3>過去30日の閲覧数</h3><div class="chart"><svg id="sv30"></svg></div></div>' +
+      '<div><h3>押されたボタン（今月）</h3><div class="rank" id="rank"></div></div>' +
+    '</div>' +
+    '<div class="foot">※ 閲覧数は「保護者の関心の目安」です。入園を希望する人の数そのものではありません。<br>' +
+    '※ 計測は2026年11月から始めたため、それより前の数字はありません。<br>' +
+    '※ 数字はGoogleアナリティクスから自動で取り込みます（数時間おきに更新）。ボタン名を押すと、HPのそのボタンの場所を開きます（開くと閲覧数に1回入ります）。</div>';
+
+  function renderStats(g, d){
+    var box = document.getElementById('stats');
+    document.getElementById('upd').textContent = (d && d.updated) ? ('最終更新：' + d.updated) : '';
+    if(!d || d.ok === false || !d.month){
+      box.innerHTML = '<div class="msg">' + esc((d && d.message) || 'この園の閲覧数は準備中です。') + '</div>';
+      return;
+    }
+    box.innerHTML = STATS_HTML;
+    var mo = d.month, daily = d.daily || [];
+    document.getElementById('kToday').textContent = fmt(d.today);
+    document.getElementById('kMonth').textContent = fmt(mo.pv);
+    document.getElementById('kVis').innerHTML = fmt(mo.users) + '<small>人</small>';
+    if(mo.newUsers != null){
+      var n = mo.newUsers || 0, r = mo.returningUsers || 0, t = n + r, np = t ? Math.round(n / t * 100) : 0;
+      document.getElementById('visBar').innerHTML = t ? '<b style="width:' + np + '%"></b>' : '';
+      document.getElementById('visTxt').textContent = 'はじめて ' + fmt(n) + '　また来た ' + fmt(r);
+    } else {
+      document.getElementById('visTxt').textContent = mo.users ? ('1人あたり ' + (mo.pv / mo.users).toFixed(1) + 'ページ') : '';
+    }
+    var mob = d.mobileRate != null ? d.mobileRate : (d.devices ? d.devices.mobile : null);
+    document.getElementById('kSp').innerHTML = (mob == null ? '—' : mob) + '<small>%</small>';
+    svgDonut(document.getElementById('svDonut'), mob);
+    var vals = daily.map(function(x){ return x.pv || 0; });
+    svgBars(document.getElementById('sv7'), vals.slice(-7), { titles: daily.slice(-7).map(function(x){ return md(x.date) + '：' + x.pv + '回'; }) });
+    var md2 = d.monthDaily && d.monthDaily.length ? d.monthDaily
+            : (daily.length ? daily.filter(function(x){ return x.date.slice(0, 7) === daily[daily.length - 1].date.slice(0, 7); }) : []);
+    var s = 0; svgLine(document.getElementById('svCum'), md2.map(function(x){ s += (x.pv || 0); return s; }));
+    svgBars(document.getElementById('sv30'), vals, { axis:true,
+      labels: daily.map(function(x, k){ return (k % 5 === 0 || k === daily.length - 1) ? md(x.date) : ''; }),
+      titles: daily.map(function(x){ return md(x.date) + '：' + x.pv + '回'; }) });
+    var bs = d.buttons || [], rank = document.getElementById('rank');
+    if(!bs.length){ rank.style.display = 'block'; rank.innerHTML = '<div class="msg" style="padding:8px 0;text-align:left">' + (d.clickReady === false ? 'ボタンの計測は準備中です。' : 'まだ記録がありません。') + '</div>'; return; }
+    var mx = Math.max.apply(null, bs.map(function(b){ return b.count; }));
+    rank.innerHTML = bs.map(function(b){
+      var url = '', base = b.page || d.url || g.url;
+      try { var u = new URL(base); u.searchParams.set('hp_find', b.label); url = u.toString(); } catch(e) {}
+      var lbl = esc(b.label);
+      var nm = url ? '<a class="nm" href="' + esc(url) + '" target="_blank" rel="noopener" title="' + lbl + '（HPのこのボタンの場所を開く）">' + lbl + '</a>'
+                   : '<span class="nm" title="' + lbl + '">' + lbl + '</span>';
+      return nm + '<span><span class="b" style="width:' + Math.max(4, b.count / mx * 100) + '%"></span></span><span class="c">' + fmt(b.count) + '回</span>';
+    }).join('');
+  }
+
+  // ---- 園を表示 ----
+  function show(i, push){
+    if(i < 0 || i >= GARDENS.length) return;
+    cur = i; var g = GARDENS[i];
+    side.querySelectorAll('button').forEach(function(b){ b.classList.toggle('on', +b.dataset.i === i); });
+    document.title = g.full + '｜各園HP';
+    document.getElementById('gName').textContent = g.full;
+    document.getElementById('gCorp').textContent = g.corp + '　' + g.code;
+    document.getElementById('pcUrl').textContent = g.url;
+    document.getElementById('openHp').href = encodeURI(g.url);
+    document.getElementById('pcFrame').src = encodeURI(g.url);
+    fitPc();
+    var im = document.getElementById('spImg'), sc = document.getElementById('spScroll');
+    im.style.display = ''; im.alt = g.full + 'のスマホ版画面'; im.src = 'hp-sp/' + g.code + '.jpg';
+    im.onerror = function(){ im.style.display = 'none'; if(!sc.querySelector('.noimg')){ var n = document.createElement('div'); n.className = 'noimg'; n.textContent = 'スマホ版の画像がまだありません'; sc.appendChild(n); } };
+    var old = sc.querySelector('.noimg'); if(old) old.remove();
+    sc.scrollTop = 0;
+    if(push) history.replaceState(null, '', '?garden=' + g.code);
+    document.getElementById('stats').innerHTML = '<div class="msg">読み込み中…</div>';
+    document.getElementById('upd').textContent = '';
+    loadStats(g).then(function(d){
+      if(cur !== i) return;   // 読み込み中にほかの園を押したとき
+      if(d && d.retry) delete cache[g.code];
+      renderStats(g, d);
+    });
+  }
+
+  if(!GARDENS.length){
+    document.querySelector('.main').innerHTML = '<div class="msg">園の一覧（gardens.js）を読み込めませんでした。ページを開き直してください。</div>';
+    return;
+  }
+  var q = new URLSearchParams(location.search).get('garden') || '';
+  var start = 0;
+  if(q){
+    var hit = (typeof findGarden === 'function') ? findGarden(q) : null;
+    var code = hit ? hit.code : q.toUpperCase();
+    GARDENS.forEach(function(g, k){ if(g.code === code) start = k; });
+  }
+  show(start, false);
+})();
+</script>
+</body>
+</html>
