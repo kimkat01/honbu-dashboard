@@ -51,7 +51,8 @@ body{margin:0;background:var(--page);color:var(--ink);font-family:"Hiragino Sans
 .pcview iframe{position:absolute;top:0;left:0;width:1280px;height:840px;border:0;transform-origin:0 0;background:#fff}
 .phonewrap{display:flex;justify-content:center}
 .phone{width:262px;height:520px;border:10px solid #222;border-radius:34px;overflow:hidden;position:relative;background:#fff}
-.phone .scroll{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;scrollbar-width:thin}
+.phone .scroll{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;scrollbar-width:none;-ms-overflow-style:none}
+.phone .scroll::-webkit-scrollbar{display:none}
 .phone img{display:block;width:100%;height:auto}
 .pcview .pcshot{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;scrollbar-width:thin;display:none}
 .pcview .pcshot img{display:block;width:100%;height:auto}
