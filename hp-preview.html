@@ -248,7 +248,7 @@ h3{font-size:15px;margin:0 0 8px}
   var verCache = {};
   // GitHubのAPIが使えないとき（1時間あたりの回数制限など）の予備：最初に保存した版
   var FALLBACK = [ { date:'2026-11-17', pc:'2026-11-17_pc.jpg', sp:'2026-11-17_sp.jpg' }, { date:'2026-11-16', sp:'2026-11-16_sp.jpg' } ];
-  var FALLBACK_BY = { S13: [ { date:'2026-11-16', pc:'2026-11-16_pc.jpg', sp:'2026-11-16_sp.jpg' } ] };   // 三郷中央は11/16版のみ（2026-11-17）
+  var FALLBACK_BY = { S13: [ { date:'2026-11-17', pc:'2026-11-17_pc.jpg', sp:'2026-11-17_sp.jpg' }, { date:'2026-11-16', pc:'2026-11-16_pc.jpg', sp:'2026-11-16_sp.jpg' } ] };   // 三郷中央：11/16＝更新前、11/17＝更新後
   function loadVersions(g){
     if(verCache[g.code]) return Promise.resolve(verCache[g.code]);
     var key = 'hp_ver_' + g.code;
