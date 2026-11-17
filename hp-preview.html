@@ -8,10 +8,13 @@
 <!--
   各園HP（2026-11-17 新設）
   ・本部ダッシュボード（index.html）左の「各園HP」から ?garden=園コード（S01〜Y03）で開く
-  ・1画面1園：①PC版（実際のHPを枠の中に表示） ②スマホ版（hp-sp/園コード.jpg の撮影画像） ③閲覧数（GA4）
+  ・1画面1園：①PC版 ②スマホ版 ③閲覧数（GA4）
+  ・「表示する時点」：現在＝PC版は実際のHP、スマホ版はいちばん新しい撮影画像。過去の日付＝その日に保存したPC版・スマホ版の画像
+  ・保存版の置き場所（2026-11-17〜、手動で追加）：hp-archive/園コード/日付_pc.jpg と 日付_sp.jpg（例：hp-archive/S13/2026-12-01_pc.jpg）
+    → GitHubにファイルを置くだけで、プルダウンに自動で出る（一覧はGitHubのAPIで読む）
   ・園の正式名・園キーは staff-dashboard/gardens.js（GARDEN_MASTER）から取る
   ・閲覧数はポータルサイトと同じGAS（HP_STATS_URL）から読む
-  ・スマホ版の画像は 2026-11-16 撮影。HPを更新したら hp-sp/ の画像を撮り直して差し替える
+  ・HPを更新したら、新しい日付で pc・sp の2枚を hp-archive/園コード/ に追加する（古い画像は消さずに残す）
   ・本部ダッシュボードにログインしたブラウザ（7日以内）だけで開ける
 -->
 <style>
@@ -50,6 +53,15 @@ body{margin:0;background:var(--page);color:var(--ink);font-family:"Hiragino Sans
 .phone{width:262px;height:520px;border:10px solid #222;border-radius:34px;overflow:hidden;position:relative;background:#fff}
 .phone .scroll{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;scrollbar-width:thin}
 .phone img{display:block;width:100%;height:auto}
+.pcview .pcshot{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;scrollbar-width:thin;display:none}
+.pcview .pcshot img{display:block;width:100%;height:auto}
+.pcview.past iframe{display:none}.pcview.past .pcshot{display:block}
+.pcview .none,.phone .none{padding:40px 16px;text-align:center;font-size:13px;color:#777}
+.ver{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--sub)}
+.ver select{font-family:inherit;font-size:14px;padding:5px 8px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--ink)}
+.pastbar{display:none;background:#fff3cd;color:#7a5300;border:1px solid #f0d58a;border-radius:8px;padding:7px 12px;font-size:13px;font-weight:700;margin:-4px 0 12px}
+.pastbar.on{display:flex;align-items:center;gap:10px}
+.pastbar button{margin-left:auto;font-size:12px;padding:3px 10px}
 .phone .noimg{padding:40px 16px;text-align:center;font-size:13px;color:#777}
 .ptools{display:flex;justify-content:center;gap:6px;margin-top:10px}
 .ptools .btn{font-size:12px;padding:4px 10px}
@@ -98,19 +110,21 @@ h3{font-size:15px;margin:0 0 8px}
   <main class="main">
     <div class="ghead">
       <h2 id="gName"></h2><span class="corp" id="gCorp"></span><span class="sp"></span>
+      <label class="ver">表示する時点 <select id="verSel"><option value="">現在（実際のHP）</option></select></label>
       <a class="btn pri" id="openHp" href="#" target="_blank" rel="noopener">HPを新しいタブで開く ↗</a>
     </div>
+    <div class="pastbar" id="pastBar"><span id="pastTxt"></span><button class="btn" type="button" id="backNow">現在に戻す</button></div>
 
     <div class="row1">
       <div>
-        <p class="lbl"><span class="num">1</span>PC版</p>
+        <p class="lbl"><span class="num">1</span>PC版<span style="font-weight:400" id="pcWhen"></span></p>
         <div class="pc">
           <div class="pcbar"><i></i><i></i><i></i><span class="url" id="pcUrl"></span></div>
-          <div class="pcview" id="pcView"><iframe id="pcFrame" title="PC版" loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe></div>
+          <div class="pcview" id="pcView"><iframe id="pcFrame" title="PC版" loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe><div class="pcshot" id="pcShot"><img id="pcImg" alt=""></div></div>
         </div>
       </div>
       <div>
-        <p class="lbl"><span class="num">2</span>スマホ版</p>
+        <p class="lbl"><span class="num">2</span>スマホ版<span style="font-weight:400" id="spWhen"></span></p>
         <div class="phonewrap"><div class="phone"><div class="scroll" id="spScroll"><img id="spImg" alt=""></div></div></div>
         <div class="ptools"><button class="btn" data-s="top">▲ 先頭へ</button><button class="btn" data-s="up">↑ 上へ</button><button class="btn" data-s="down">↓ 下へ</button></div>
         <div class="note" style="text-align:center">枠の中はマウスのホイールでスクロールできます</div>
@@ -119,7 +133,7 @@ h3{font-size:15px;margin:0 0 8px}
 
     <p class="lbl"><span class="num">3</span>閲覧数　<span style="font-weight:400" id="upd"></span></p>
     <div class="card" id="stats"><div class="msg">読み込み中…</div></div>
-    <p class="note">※ スマホ版は 2026年11月16日 時点に撮影した画像です（リンクは押せません）。HPを更新した後は撮り直しが必要です。</p>
+    <p class="note">※ スマホ版と保存版は撮影した画像です（リンクは押せません）。HPを更新したら、新しい日付でPC版・スマホ版の画像を追加してください（古い版はそのまま残ります）。</p>
   </main>
 </div>
 
@@ -227,6 +241,34 @@ h3{font-size:15px;margin:0 0 8px}
       (p == null ? '' : '<circle cx="50" cy="28" r="' + r + '" fill="none" stroke="' + css('--acc') + '" stroke-width="9" stroke-dasharray="' + (c * p / 100) + ' ' + c + '" transform="rotate(-90 50 28)"/>');
   }
 
+  // ---- 保存版の一覧（hp-archive/園コード/ のファイル名から作る） ----
+  var REPO_API = 'https://api.github.com/repos/kimkat01/honbu-dashboard/contents/hp-archive/';
+  var ARCHIVE = 'hp-archive/';
+  var verCache = {};
+  // GitHubのAPIが使えないとき（1時間あたりの回数制限など）の予備：最初に保存した版
+  var FALLBACK = [ { date:'2026-11-17', pc:'2026-11-17_pc.jpg', sp:'2026-11-17_sp.jpg' }, { date:'2026-11-16', sp:'2026-11-16_sp.jpg' } ];
+  function loadVersions(g){
+    if(verCache[g.code]) return Promise.resolve(verCache[g.code]);
+    var key = 'hp_ver_' + g.code;
+    try { var c = JSON.parse(sessionStorage.getItem(key) || 'null'); if(c && Date.now() - c.t < 10 * 60000){ verCache[g.code] = c.v; return Promise.resolve(c.v); } } catch(e) {}
+    return fetch(REPO_API + g.code + '?ref=main', { headers:{ 'Accept':'application/vnd.github+json' } })
+      .then(function(r){ if(!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+      .then(function(list){
+        var by = {};
+        (list || []).forEach(function(f){
+          var m = /^(\d{4}-\d{2}-\d{2})_(pc|sp)\.(jpe?g|png|webp)$/i.exec(f.name || '');
+          if(!m) return;
+          (by[m[1]] = by[m[1]] || { date:m[1] })[m[2].toLowerCase()] = f.name;
+        });
+        var v = Object.keys(by).sort().reverse().map(function(d){ return by[d]; });
+        verCache[g.code] = v;
+        try { sessionStorage.setItem(key, JSON.stringify({ t:Date.now(), v:v })); } catch(e) {}
+        return v;
+      })
+      .catch(function(){ return FALLBACK; });
+  }
+  function jp(d){ return d.replace(/-/g, '/'); }
+
   // ---- 閲覧数（GAS） ----
   var cache = {}, cur = -1;
   function loadStats(g){
@@ -306,11 +348,19 @@ h3{font-size:15px;margin:0 0 8px}
     document.getElementById('openHp').href = encodeURI(g.url);
     document.getElementById('pcFrame').src = encodeURI(g.url);
     fitPc();
-    var im = document.getElementById('spImg'), sc = document.getElementById('spScroll');
-    im.style.display = ''; im.alt = g.full + 'のスマホ版画面'; im.src = 'hp-sp/' + g.code + '.jpg';
-    im.onerror = function(){ im.style.display = 'none'; if(!sc.querySelector('.noimg')){ var n = document.createElement('div'); n.className = 'noimg'; n.textContent = 'スマホ版の画像がまだありません'; sc.appendChild(n); } };
-    var old = sc.querySelector('.noimg'); if(old) old.remove();
-    sc.scrollTop = 0;
+    var sel = document.getElementById('verSel');
+    sel.innerHTML = '<option value="">現在（実際のHP）</option>'; sel.disabled = true;
+    setImg('spImg', 'spScroll', '', ''); 
+    loadVersions(g).then(function(v){
+      if(cur !== i) return;
+      VERS = v;
+      sel.innerHTML = '<option value="">現在（実際のHP）</option>' + v.map(function(x){
+        return '<option value="' + x.date + '">' + jp(x.date) + ' の保存版' + (x.pc && x.sp ? '' : (x.pc ? '（PC版のみ）' : '（スマホ版のみ）')) + '</option>'; }).join('');
+      sel.disabled = false;
+      var want = startVer && v.some(function(x){ return x.date === startVer; }) ? startVer : '';
+      startVer = '';
+      sel.value = want; showVer(want);
+    });
     if(push) history.replaceState(null, '', '?garden=' + g.code);
     document.getElementById('stats').innerHTML = '<div class="msg">読み込み中…</div>';
     document.getElementById('upd').textContent = '';
@@ -320,6 +370,45 @@ h3{font-size:15px;margin:0 0 8px}
       renderStats(g, d);
     });
   }
+
+  // ---- 表示する時点の切り替え ----
+  var VERS = [], startVer = new URLSearchParams(location.search).get('ver') || '';
+  function setImg(imgId, boxId, src, alt, emptyMsg){
+    var im = document.getElementById(imgId), box = document.getElementById(boxId), old = box.querySelector('.none');
+    if(old) old.remove();
+    box.scrollTop = 0;
+    if(!src){
+      im.removeAttribute('src'); im.style.display = 'none';
+      if(emptyMsg){ var n = document.createElement('div'); n.className = 'none'; n.textContent = emptyMsg; box.appendChild(n); }
+      return;
+    }
+    im.style.display = ''; im.alt = alt; im.src = src;
+    im.onerror = function(){ setImg(imgId, boxId, '', '', '画像を読み込めませんでした'); };
+  }
+  function showVer(date){
+    var g = GARDENS[cur], pv = document.getElementById('pcView');
+    var latestSp = null; VERS.some(function(x){ if(x.sp){ latestSp = x; return true; } return false; });
+    var bar = document.getElementById('pastBar');
+    if(!date){
+      pv.classList.remove('past'); bar.classList.remove('on');
+      document.getElementById('pcUrl').textContent = g.url;
+      document.getElementById('pcWhen').textContent = '（現在の実際のHP）';
+      document.getElementById('spWhen').textContent = latestSp ? '（' + jp(latestSp.date) + ' 撮影）' : '';
+      setImg('spImg', 'spScroll', latestSp ? ARCHIVE + g.code + '/' + latestSp.sp : '', g.full + 'のスマホ版画面', 'スマホ版の画像がまだありません');
+    } else {
+      var x = VERS.filter(function(v){ return v.date === date; })[0] || {};
+      pv.classList.add('past'); bar.classList.add('on');
+      document.getElementById('pastTxt').textContent = jp(date) + ' 時点の保存版を表示しています（今のHPとは違う場合があります）';
+      document.getElementById('pcUrl').textContent = '保存版 ' + jp(date) + '　' + g.url;
+      document.getElementById('pcWhen').textContent = '（' + jp(date) + ' 保存）';
+      document.getElementById('spWhen').textContent = '（' + jp(date) + ' 保存）';
+      setImg('pcImg', 'pcShot', x.pc ? ARCHIVE + g.code + '/' + x.pc : '', g.full + 'のPC版（' + jp(date) + '）', 'この日のPC版の保存はありません');
+      setImg('spImg', 'spScroll', x.sp ? ARCHIVE + g.code + '/' + x.sp : '', g.full + 'のスマホ版（' + jp(date) + '）', 'この日のスマホ版の保存はありません');
+    }
+    history.replaceState(null, '', '?garden=' + g.code + (date ? '&ver=' + date : ''));
+  }
+  document.getElementById('verSel').addEventListener('change', function(){ showVer(this.value); });
+  document.getElementById('backNow').addEventListener('click', function(){ document.getElementById('verSel').value = ''; showVer(''); });
 
   if(!GARDENS.length){
     document.querySelector('.main').innerHTML = '<div class="msg">園の一覧（gardens.js）を読み込めませんでした。ページを開き直してください。</div>';
