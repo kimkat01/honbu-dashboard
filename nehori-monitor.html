@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ねほりんぱほりん 入室状況（本部）</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=Zen+Maru+Gothic:wght@500;700&display=swap">
+<!-- アバター・開催回・GASのURLは会場と同じ設定ファイルを読む -->
+<script src="https://kimkat01.github.io/staff-dashboard/nehori/config.js"></script>
+<!--
+  しおどめねほりんぱほりん 入室状況（本部用・2026-11-18 試作版）
+  ・会場（staff-dashboard/nehori/）に、どのアバターで・どの園の誰が入っているかを本名つきで表示（4秒ごとに更新）
+  ・入室・退室の記録と、録音ファイル（ドライブ）へのリンク
+  ・データは GAS「しおどめねほりんぱほりん 通信」の action=monitor から。合言葉（GASの MONITOR_KEY）が必要
+-->
+<style>
+:root{--bg:#eef2fa;--surface:#fff;--ink:#1b2340;--muted:#56607c;--line:#d5dcec;--accent:#4169e2;--accent-ink:#fff;--accent-soft:#e1e8fb;--red:#c8453a;--talk:#2fb36b;
+  --display:"Zen Maru Gothic","Hiragino Maru Gothic ProN","Meiryo",sans-serif;--body:"BIZ UDPGothic","Hiragino Kaku Gothic ProN","Meiryo",sans-serif}
+@media (prefers-color-scheme: dark){:root{--bg:#10141e;--surface:#191f2e;--ink:#e4e9f5;--muted:#9ba6c2;--line:#2a3249;--accent:#7d9cf2;--accent-ink:#0e1530;--accent-soft:#1e2a4d;--red:#ef7b70;color-scheme:dark}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.6}
+[hidden]{display:none!important}
+.wrap{max-width:1100px;margin:0 auto;padding:18px 18px 40px;display:grid;gap:14px}
+header{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+h1{font-family:var(--display);font-size:22px;margin:0 auto 0 0}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px}
+.card h2{font-family:var(--display);font-size:17px;margin:0 0 10px}
+.btn{display:inline-flex;align-items:center;gap:6px;border:0;border-radius:999px;padding:8px 18px;font:inherit;font-weight:700;background:var(--accent);color:var(--accent-ink);text-decoration:none;cursor:pointer}
+.btn.sub{background:var(--surface);color:var(--accent);border:1.5px solid var(--accent)}
+input{font:inherit;font-size:15px;padding:7px 10px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink)}
+.muted{color:var(--muted)} .small{font-size:13px}
+.err{color:var(--red)}
+.seats{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.seat{border:1px solid var(--line);border-radius:12px;padding:10px;display:grid;justify-items:center;gap:2px;text-align:center;background:var(--bg)}
+.seat svg{width:64px;height:64px}
+.seat .av{font-weight:700}
+.seat .nm{font-size:16px;font-weight:700;color:var(--accent)}
+.seat .gd{font-size:12.5px;color:var(--muted)}
+.seat .st{font-size:12px}
+.seat.mc{background:var(--accent-soft)}
+.seat.empty{opacity:.45;border-style:dashed}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th,td{border-bottom:1px solid var(--line);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:var(--accent-soft);position:sticky;top:0}
+.tbl{max-height:420px;overflow:auto;border:1px solid var(--line);border-radius:10px}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>ねほりんぱほりん 入室状況<span class="muted small">（本部限定）</span></h1>
+    <a class="btn" id="enterMc" href="#" target="_blank" rel="noopener">MCとして会場に入る</a>
+  </header>
+
+  <section class="card" id="login" hidden>
+    <h2>合言葉を入れてください</h2>
+    <form id="lf" class="row">
+      <input type="password" id="lk" autocomplete="off" aria-label="合言葉">
+      <button class="btn" type="submit">表示する</button>
+      <span class="err" id="le" role="alert"></span>
+    </form>
+  </section>
+
+  <section id="main" hidden style="display:grid;gap:14px">
+    <div class="card">
+      <div class="row" style="justify-content:space-between">
+        <h2 style="margin:0" id="evTitle"></h2>
+        <div class="row small">
+          <label>回 <input id="evInput" size="12" aria-label="回"></label>
+          <button class="btn sub" id="evBtn" type="button">切り替え</button>
+          <span class="muted" id="upd">—</span>
+        </div>
+      </div>
+      <p class="muted small" style="margin:6px 0 10px">いま会場にいる人（4秒ごとに更新）。園名・名前は本部のこの画面だけに表示され、参加者には見えません。</p>
+      <div class="seats" id="seats"></div>
+    </div>
+
+    <div class="card">
+      <div class="row" style="justify-content:space-between"><h2 style="margin:0">録音ファイル</h2><a class="btn sub" id="folder" href="#" target="_blank" rel="noopener">ドライブのフォルダを開く</a></div>
+      <p class="muted small" style="margin:6px 0 10px">一人ずつ・30秒ごとに分かれて保存されます（ファイル名にアバター・園名・名前入り）。文字にするときは VoiceMinutes に読み込ませてください。</p>
+      <div class="tbl"><table><thead><tr><th>日時</th><th>役割</th><th>アバター</th><th>園名</th><th>名前</th><th>連番</th><th>ファイル</th></tr></thead><tbody id="recs"></tbody></table></div>
+    </div>
+
+    <div class="card">
+      <h2>入室・退室の記録</h2>
+      <div class="tbl"><table><thead><tr><th>日時</th><th>種別</th><th>役割</th><th>アバター</th><th>声</th><th>園名</th><th>ログインID</th><th>名前</th></tr></thead><tbody id="logs"></tbody></table></div>
+    </div>
+  </section>
+</div>
+<script>
+(function(){
+"use strict";
+const $=id=>document.getElementById(id);
+const esc=s=>String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const KEY_STORE="nehori_monitor_key";
+let ev=NEHORI_EVENT.id, key="";
+try{ key=localStorage.getItem(KEY_STORE)||""; }catch(e){}
+// 本部ダッシュボードを開いたブラウザの印（会場側が「MCとして入る」を出すのに使う）
+try{ localStorage.setItem("sd_honbu_viewer", String(Date.now())); }catch(e){}
+
+function venueUrl(){ return "https://kimkat01.github.io/staff-dashboard/nehori/?mc=1"+(ev!==NEHORI_EVENT.id?"&ev="+encodeURIComponent(ev):""); }
+function setEv(v){ ev=v; $("evInput").value=v; $("evTitle").textContent=(v===NEHORI_EVENT.id?NEHORI_EVENT.title+"（"+NEHORI_EVENT.label+"）":"テスト回："+v); $("enterMc").href=venueUrl(); }
+setEv(ev);
+$("evBtn").addEventListener("click",()=>{ const v=$("evInput").value.trim(); if(/^[\w-]{1,40}$/.test(v)){ setEv(v); load(); } });
+
+function post(body){ return fetch(NEHORI_GAS_URL,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(body)}).then(r=>r.json()); }
+
+function showLogin(msg){ $("login").hidden=false; $("main").hidden=true; $("le").textContent=msg||""; setTimeout(()=>$("lk").focus(),30); }
+$("lf").addEventListener("submit",e=>{ e.preventDefault(); key=$("lk").value.trim(); try{ localStorage.setItem(KEY_STORE,key); }catch(x){} load(); });
+
+function seat(m, a){
+  if(!m) return '<div class="seat empty">'+nehoriAvatarSVG(a.id)+'<span class="av">'+a.name+'</span><span class="gd">空席</span></div>';
+  const st=[m.muted?"🔇マイクOFF":"🎙️マイクON", m.hand?"✋挙手中":""].filter(Boolean).join("　");
+  return '<div class="seat'+(m.role==="mc"?" mc":"")+'">'+nehoriAvatarSVG(m.av)+
+    '<span class="av">'+esc(a.name)+(m.role==="mc"?"（MC）":"")+'</span>'+
+    '<span class="nm">'+esc(m.name||"（不明）")+'</span>'+
+    '<span class="gd">'+esc(m.garden)+(m.loginId?"（ID "+esc(m.loginId)+"）":"")+'</span>'+
+    '<span class="st">'+st+'</span></div>';
+}
+let timer=null;
+function load(){
+  if(!NEHORI_GAS_URL){ showLogin("GASのURL（config.js）がまだ設定されていません。"); return; }
+  if(!key){ if($("login").hidden) showLogin(""); return; }
+  post({action:"monitor",ev,key}).then(d=>{
+    if(!d||!d.ok){ if(d&&d.code==="badkey"){ key=""; try{ localStorage.removeItem(KEY_STORE); }catch(e){} showLogin("合言葉がちがいます。"); } return; }
+    $("login").hidden=true; $("main").hidden=false;
+    const ms=d.members||[];
+    const all=NEHORI_MC_AVATARS.concat(NEHORI_AVATARS);
+    $("seats").innerHTML=all.map(a=>seat(ms.find(m=>m.av===a.id)||null,a)).join("");
+    $("folder").href=d.folder||"#";
+    $("recs").innerHTML=(d.recs||[]).map(r=>'<tr><td>'+esc(r["日時"])+'</td><td>'+esc(r["役割"])+'</td><td>'+esc(r["アバター"])+'</td><td>'+esc(r["園名"])+'</td><td>'+esc(r["名前"])+'</td><td>'+esc(r["連番"])+'</td><td><a href="'+esc(r["URL"])+'" target="_blank" rel="noopener">開く</a></td></tr>').join("")||'<tr><td colspan="7" class="muted">まだありません</td></tr>';
+    $("logs").innerHTML=(d.logs||[]).map(r=>'<tr><td>'+esc(r["日時"])+'</td><td>'+esc(r["種別"])+'</td><td>'+esc(r["役割"])+'</td><td>'+esc(r["アバター"])+'</td><td>'+esc((NEHORI_VOICES[r["声"]]||{}).label||r["声"])+'</td><td>'+esc(r["園名"])+'</td><td>'+esc(r["ログインID"])+'</td><td>'+esc(r["名前"])+'</td></tr>').join("")||'<tr><td colspan="8" class="muted">まだありません</td></tr>';
+    $("upd").textContent="更新 "+new Date().toLocaleTimeString("ja-JP",{hour:"2-digit",minute:"2-digit",second:"2-digit"});
+  }).catch(()=>{ $("upd").textContent="通信できませんでした"; });
+  clearTimeout(timer); timer=setTimeout(load,4000);
+}
+load();
+})();
+</script>
+</body>
+</html>
