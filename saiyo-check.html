@@ -73,11 +73,12 @@
   .stamp{display:inline-block;margin-top:4px;border:2px solid currentColor;border-radius:6px;padding:1px 10px;font-weight:800;font-size:14px}
   .stamp.wait{color:#a86b00}.stamp.ok{color:#17784a}.stamp.talk{color:#3a63d8}.stamp.ng{color:#b02a2a}
 
-  .sum{display:grid;grid-template-columns:repeat(4,1fr);border:1px solid #999;margin-top:10px}
+  .sum{display:grid;grid-template-columns:repeat(5,1fr);border:1px solid #999;margin-top:10px}
   .sum>div{padding:6px 8px;border-right:1px solid #ccc}
   .sum>div:last-child{border-right:none}
-  .sum .k{font-size:12.5px;color:#333;font-weight:800}
+  .sum .k{font-size:12.5px;color:#333;font-weight:800;white-space:nowrap}
   .sum .v{font-size:17px;font-weight:800}
+  .sum .v .to{font-size:13px;color:#555}.sum .v .bad{color:#b02a2a}.sum .v .ok{color:#17784a}
   @media (max-width:600px){.sum{grid-template-columns:1fr 1fr}.sum>div:nth-child(2){border-right:none}.sum>div:nth-child(-n+2){border-bottom:1px solid #ccc}}
 
   h3{font-size:15px;margin:14px 0 5px;padding:3px 8px;background:#1b2340;color:#fff;border-radius:3px;letter-spacing:.04em;display:flex;justify-content:space-between;align-items:center;gap:8px}
@@ -174,6 +175,36 @@
     S11:{a:[15,20,25,30,30,30]}, S12:{a:[3,8,8,null,null,null]}, S13:{a:[null,9,10,null,null,null]},
     S14:{a:[3,6,12,12,12,12]}, Y01:{a:[9,12,12,14,14,14]}, Y02:{a:[9,12,15,18,18,18]}, Y03:{a:[3,5,5,19,19,19]}
   };
+  /* 人件費率（人件費÷収入）。出典：しおどめナレッジ「月次収支レポート」（keiei-dashboard.html）の各園の最新月（2026-11-25 転記）
+     ・m＝表示する月、inc＝その月の収入、lab＝その月の人件費
+     ・cum＝年度の累計（あれば）、bud＝年間予算の人件費率（あれば）。採用後の見込みは「累計（なければ最新月）＋年間人件費÷（その月の収入×12）」
+     ・月次収支レポートを更新したら、ここも書き換える。京急蒲田駅前（S03）・八潮茜町（S08）はまだ数字なし */
+  const JINKEN_TARGET=70;   // 月次収支レポートの目安（70%）
+  const JINKEN={
+    S01:{m:'令和8年6月',inc:16536580,lab:10895012}, S02:{m:'令和8年6月',inc:9548018,lab:6726175},
+    S04:{m:'令和8年6月',inc:5004023,lab:3310803},   S05:{m:'令和8年6月',inc:5599400,lab:3493916},
+    S06:{m:'令和8年6月',inc:5418838,lab:3490057},   S07:{m:'令和8年6月',inc:5307650,lab:2973589},
+    S09:{m:'令和8年9月',inc:10495270,lab:6340646,cum:{label:'4〜9月累計',v:70.1},bud:70.8},
+    S10:{m:'令和8年6月',inc:11243428,lab:7125575}, S11:{m:'令和8年6月',inc:22762001,lab:14799020},
+    S12:{m:'令和8年6月',inc:4079530,lab:2489994},  S13:{m:'令和8年6月',inc:4710458,lab:3022825},
+    S14:{m:'令和8年9月',inc:11836007,lab:6430948,cum:{label:'4〜9月累計',v:59.3},bud:67.6},
+    Y01:{m:'令和8年6月',inc:10079742,lab:8270476}, Y02:{m:'令和8年6月',inc:10838364,lab:5814215},
+    Y03:{m:'令和8年6月',inc:5906690,lab:5265604}
+  };
+  /* 人件費率の表示を作る（sum＝上のまとめ欄、rows＝「費用」の表の行） */
+  function jinken(code,annual){
+    const j=JINKEN[String(code||'')];
+    const pc=v=>v.toFixed(1)+'%';
+    const cls=v=>v>JINKEN_TARGET?'bad':'ok';
+    if(!j) return {sum:'—',rows:'<tr><th>人件費率</th><td>月次収支レポートにまだ数字がありません</td></tr>'};
+    const month=j.lab/j.inc*100, base=j.cum?j.cum.v:month;
+    const add=annual?annual/(j.inc*12)*100:0, after=base+add;
+    const now=`<b class="${cls(base)}" style="color:${base>JINKEN_TARGET?'#b02a2a':'#17784a'}">${pc(base)}</b>`;
+    let rows=`<tr><th>人件費率（現状）</th><td>${now}　${j.cum?esc(j.cum.label)+'。':''}${j.bud?'年間予算 '+pc(j.bud)+'。':''}目安 ${JINKEN_TARGET}%<br><small>${esc(j.m)}の単月：${pc(month)}（人件費 ${yen(j.lab)} ÷ 収入 ${yen(j.inc)}）</small></td></tr>`;
+    if(annual) rows+=`<tr><th>人件費率（採用後の見込み）</th><td><b style="color:${after>JINKEN_TARGET?'#b02a2a':'#17784a'}">${pc(after)}</b>（＋${add.toFixed(1)}ポイント）<br><small>年間人件費 ${yen(annual)} ÷ 年間収入の見込み ${yen(j.inc*12)}（${esc(j.m)}の収入×12）を足した数</small></td></tr>`;
+    const sum=`<span class="${cls(base)}">${pc(base)}</span>${annual?` <span class="to">→</span> <span class="${cls(after)}">${pc(after)}</span>`:''}`;
+    return {sum,rows};
+  }
   const $=id=>document.getElementById(id);
   const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
   const num=v=>{const n=Number(String(v??'').replace(/[¥,円\s]/g,''));return isFinite(n)?n:0;};
@@ -299,6 +330,7 @@
     const job=`${r['職種']||''}${has(r['雇用形態'])&&!String(r['職種']).includes(r['雇用形態'])?'（'+r['雇用形態']+'）':''}`;
     const ym=v=>{const m=String(v||'').match(/^(\d{4})-(\d{2})/);return m?`${m[1]}年${+m[2]}月`:String(v||'');};
     const fy=num(r['人件費_年度末まで']), annual=num(r['想定年間人件費']), fee=num(r['採用経費（最大）']);
+    const jk=jinken(r['施設コード'],annual);
     let h_html='';
     if(h.skipped){
       h_html=`<div class="expl">保育士以外の採用のため、配置基準の確認は省略されています。</div>`;
@@ -328,6 +360,7 @@
         <div><div class="k">採用予定人数</div><div class="v">${esc(r['採用予定人数']||'')}人</div></div>
         <div><div class="k">入職希望</div><div class="v">${esc(ym(r['入職希望日'])||r['採用希望時期']||'—')}</div></div>
         <div><div class="k">年間人件費（${esc(r['採用予定人数']||1)}人分）</div><div class="v">${annual?yen(annual):'—'}</div></div>
+        <div><div class="k">人件費率${annual?'（現状→採用後）':''}</div><div class="v">${jk.sum}</div></div>
       </div>
       <h3>1. 配置基準の確認<small id="haichi-sum">${esc(r['配置基準の確認']||'')}</small></h3>
       ${h_html}
@@ -342,6 +375,7 @@
         ${row('紹介会社等',r['利用予定の紹介会社等']||r['紹介会社_派遣を使うか'])}
         ${row('採用経費（最大）',has(r['採用経費（最大）'])?yen(fee):'')}
         ${annual?`<tr><th>初年度の合計（最大）</th><td><b>${yen(annual+fee)}</b>（年間人件費＋採用経費）</td></tr>`:''}
+        ${jk.rows}
       </table>
       <h3>4. 本部の判断</h3>
       <table class="memo"><tr><th>判定</th><td>${esc(stText(r['ステータス']))}${has(r['本部確認者'])?'　確認者：'+esc(r['本部確認者']):''}${has(r['本部確認日時'])?'　'+esc(r['本部確認日時']):''}　　□ 可決　　□ 相談</td></tr>
@@ -394,12 +428,14 @@
     const files=String(r['履歴書URL']||'').split(/\n+/).filter(x=>x.trim()).map(x=>{const m=x.match(/https?:\/\/\S+/); if(!m) return esc(x);
       const label=x.replace(m[0],'').replace(/[：:\s]+$/,'').trim()||'ファイルを開く'; return `<a class="att" href="${esc(m[0])}" target="_blank" rel="noopener">${esc(label)}</a>`;}).join('<br>');
     const diff=r['①との相違有無']==='あり';
+    const jk=jinken(r['施設コード']||(pre&&pre.r['施設コード']),num(r['人件費_年間']));
     return head('応募者決裁 確認表',r,'決裁ID',`記入者：${esc(r['記入者']||'')}`)+`
       <div class="sum">
         <div><div class="k">応募者</div><div class="v">${esc(r['応募者氏名']||'')}さん</div></div>
         <div><div class="k">職種</div><div class="v">${esc(r['確定雇用形態']||'')}</div></div>
         <div><div class="k">入職日</div><div class="v">${esc(r['入職日']||'—')}</div></div>
         <div><div class="k">年間人件費</div><div class="v">${has(r['人件費_年間'])?yen(r['人件費_年間']):'—'}</div></div>
+        <div><div class="k">人件費率${num(r['人件費_年間'])?'（現状→採用後）':''}</div><div class="v">${jk.sum}</div></div>
       </div>
       <h3>1. もとになった採用前申請<small>${pre?esc(stText(pre.r['ステータス'])):''}</small></h3>
       <table>${row('申請',r['採用前申請タイトル']||r['紐づく申請ID'])}
@@ -413,7 +449,8 @@
         ${row('想定年収（1人）',has(r['想定年収（1人）'])?yen(r['想定年収（1人）']):'')}
         ${row('人件費（年度末まで）',has(r['人件費_年度末まで'])?yen(r['人件費_年度末まで']):'')}
         ${row('人件費（年間）',has(r['人件費_年間'])?yen(r['人件費_年間']):'')}
-        ${row('採用経路',r['採用媒体'])}${row('紹介手数料',has(r['紹介手数料'])?yen(r['紹介手数料']):'')}</table>
+        ${row('採用経路',r['採用媒体'])}${row('紹介手数料',has(r['紹介手数料'])?yen(r['紹介手数料']):'')}
+        ${jk.rows}</table>
       <h3>4. 本部の判断</h3>
       <table class="memo"><tr><th>判定</th><td>${esc(stText(r['ステータス']))}${has(r['決裁者'])?'　決裁者：'+esc(r['決裁者']):''}${has(r['決裁日時'])?'　'+esc(r['決裁日時']):''}　　□ 採用決定　　□ 相談</td></tr>
         <tr><th>コメント</th><td>${esc(r['決裁コメント']||'')}</td></tr></table>`;
