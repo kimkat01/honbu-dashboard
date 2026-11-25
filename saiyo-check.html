@@ -368,7 +368,9 @@
       if(!el()) return;
       const s=s0&&s0.total?{...s0,seiki:{...s0.seiki,fte:f2(s0.seiki.fte)},part:{...s0.part,fte:f2(s0.part.fte)},total:{...s0.total,fte:f2(s0.total.fte)}}:s0;
       if(!s||!s.total||!s.total.n){ fail('職員マスタに未登録'); return; }
-      el().innerHTML=`<b>${s.total.fte}人</b><br><small>正規 ${s.seiki.n}人（${s.seiki.fte}）＋パート ${s.part.n}人（${s.part.fte}）</small>`;
+      const pl=s0.part&&s0.part.long, ps=s0.part&&s0.part.short;
+      el().innerHTML=`<b>${s.total.fte}人</b><br><small>正規 ${s.seiki.n}人（${s.seiki.fte}）＋パート ${s.part.n}人（${s.part.fte}）</small>`
+        +(pl&&ps?`<br><small>パートのうち<br>・長時間（週30時間以上）${pl.n}人（${f2(pl.fte)}）<br>・短時間（週30時間未満）${ps.n}人（${f2(ps.fte)}）${s.noHours?`<br>・週の時間が未入力 ${s.noHours}人`:''}</small>`:'');
       judge(Number(s.total.fte),'今日時点');
       const notes=[]; if(s.noHours) notes.push(`週の時間が未入力 ${s.noHours}人（常勤換算に入っていません）`); if(s.excluded) notes.push(`対象外 ${s.excluded}人（育休中など）`); if(s.others) notes.push(`保育士として数えない職員 ${s.others}人（園長・事務・調理など）`);
       box().innerHTML=`<table style="margin-top:4px;background:#fff"><tr><th style="width:auto"></th><th style="width:auto;text-align:center">人数</th><th style="width:auto;text-align:center">常勤換算</th></tr>
