@@ -62,24 +62,25 @@
   .btn{border:none;border-radius:8px;padding:8px 16px;font-weight:800;cursor:pointer;background:var(--accent);color:#fff}
   .btn.g{background:#fff;color:var(--ink);border:1px solid var(--line)}
   .empty{background:var(--paper);border-radius:12px;padding:40px 20px;text-align:center;color:var(--sub);width:100%;max-width:794px}
-  .page{background:#fff;width:794px;max-width:100%;min-height:1123px;padding:34px 38px;box-shadow:0 4px 18px rgba(27,35,64,.14);font-size:12.5px;line-height:1.55;color:#111}
+  .page{background:#fff;width:794px;max-width:100%;min-height:1123px;padding:34px 38px;box-shadow:0 4px 18px rgba(27,35,64,.14);font-size:14px;line-height:1.55;color:#111}
+  .page small{font-size:12.5px;font-weight:700}
   @media (max-width:860px){.page{padding:20px 16px;min-height:0}}
   .doc-h{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;border-bottom:2.5px solid #1b2340;padding-bottom:8px}
   .doc-h h2{margin:0;font-size:21px;letter-spacing:.08em}
-  .doc-h .sub{font-size:12px;color:#444;margin-top:2px}
-  .doc-h .meta{font-size:11.5px;text-align:right;color:#333;line-height:1.5}
+  .doc-h .sub{font-size:13.5px;font-weight:700;color:#333;margin-top:2px}
+  .doc-h .meta{font-size:13px;font-weight:700;text-align:right;color:#222;line-height:1.5}
   .stamp{display:inline-block;margin-top:4px;border:2px solid currentColor;border-radius:6px;padding:1px 10px;font-weight:800;font-size:14px}
   .stamp.wait{color:#a86b00}.stamp.ok{color:#17784a}.stamp.talk{color:#3a63d8}.stamp.ng{color:#b02a2a}
 
   .sum{display:grid;grid-template-columns:repeat(4,1fr);border:1px solid #999;margin-top:10px}
   .sum>div{padding:6px 8px;border-right:1px solid #ccc}
   .sum>div:last-child{border-right:none}
-  .sum .k{font-size:10.5px;color:#555;font-weight:700}
-  .sum .v{font-size:15px;font-weight:800}
+  .sum .k{font-size:12.5px;color:#333;font-weight:800}
+  .sum .v{font-size:17px;font-weight:800}
   @media (max-width:600px){.sum{grid-template-columns:1fr 1fr}.sum>div:nth-child(2){border-right:none}.sum>div:nth-child(-n+2){border-bottom:1px solid #ccc}}
 
-  h3{font-size:13.5px;margin:14px 0 5px;padding:3px 8px;background:#1b2340;color:#fff;border-radius:3px;letter-spacing:.04em;display:flex;justify-content:space-between;align-items:center;gap:8px}
-  h3 small{font-weight:400;font-size:11px;opacity:.85}
+  h3{font-size:15px;margin:14px 0 5px;padding:3px 8px;background:#1b2340;color:#fff;border-radius:3px;letter-spacing:.04em;display:flex;justify-content:space-between;align-items:center;gap:8px}
+  h3 small{font-weight:700;font-size:13px;opacity:1}
   table{border-collapse:collapse;width:100%}
   th,td{border:1px solid #aaa;padding:4px 7px;vertical-align:top;text-align:left}
   th{background:#f0f2f7;font-weight:700;white-space:nowrap;width:9.5em}
@@ -89,13 +90,15 @@
   table.grid td{text-align:center}
   .judge{display:flex;gap:10px;align-items:stretch;margin-top:6px}
   .judge .box{flex:1;border:2px solid;border-radius:6px;padding:6px 10px}
-  .judge .box .k{font-size:11px;font-weight:700}
-  .judge .box .v{font-size:18px;font-weight:800}
+  .judge .box .k{font-size:13px;font-weight:800}
+  .judge .box .v{font-size:21px;font-weight:800}
   .judge .box.ok{border-color:#17784a;color:#17784a;background:#f1faf4}
   .judge .box.ng{border-color:#b02a2a;color:#b02a2a;background:#fdf3f3}
   .judge .box.neu{border-color:#3a63d8;color:#1b2340;background:#f4f7fe}
-  .expl{font-size:11px;color:#444;margin-top:4px;line-height:1.5}
-  .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .expl{font-size:12.5px;font-weight:700;color:#222;margin-top:4px;line-height:1.5}
+  .two{display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:start}
+  table.grid{width:auto}
+  table.grid th,table.grid td{padding:4px 6px}
   @media (max-width:600px){.two{grid-template-columns:1fr}}
   .memo td{height:46px}
   a.att{color:#2c4fb4;font-weight:700}
@@ -327,11 +330,9 @@
       </div>
       <h3>1. 配置基準の確認<small id="haichi-sum">${esc(r['配置基準の確認']||'')}</small></h3>
       ${h_html}
-      <h3>2. 募集する理由・求める人物像</h3>
-      <table>${row('募集する理由',r['採用理由詳細']||r['採用理由'])}${row('求める人物像',r['求める保育士像'])}${row('業務内容',r['業務内容'])}</table>
-      <h3>3. 求人の条件</h3>
+      <h3>2. 求人の条件</h3>
       <table>${row('給与',r['給与'])}${row('勤務時間',r['勤務時間'])}${row('待遇',r['待遇'])}${row('応募条件',r['応募条件'])}</table>
-      <h3>4. 費用</h3>
+      <h3>3. 費用</h3>
       <table>
         ${row('想定年収（1人）',has(r['想定年収（1人）'])?yen(r['想定年収（1人）']):'')}
         ${row('年収の内訳',r['人件費シミュレーション内訳'])}
@@ -341,7 +342,7 @@
         ${row('採用経費（最大）',has(r['採用経費（最大）'])?yen(fee):'')}
         ${annual?`<tr><th>初年度の合計（最大）</th><td><b>${yen(annual+fee)}</b>（年間人件費＋採用経費）</td></tr>`:''}
       </table>
-      <h3>5. 本部の判断</h3>
+      <h3>4. 本部の判断</h3>
       <table class="memo"><tr><th>判定</th><td>${esc(stText(r['ステータス']))}${has(r['本部確認者'])?'　確認者：'+esc(r['本部確認者']):''}${has(r['本部確認日時'])?'　'+esc(r['本部確認日時']):''}　　□ 可決　　□ 相談</td></tr>
         <tr><th>本部コメント</th><td>${esc(r['本部コメント']||'')}</td></tr></table>`;
   }
