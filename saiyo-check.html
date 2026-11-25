@@ -59,7 +59,8 @@
   /* 書類（A4） */
   .viewer{display:flex;flex-direction:column;gap:10px;align-items:center}
   .toolbar{width:100%;max-width:794px;display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
-  .btn{border:none;border-radius:8px;padding:8px 16px;font-weight:800;cursor:pointer;background:var(--accent);color:#fff}
+  .btn[hidden]{display:none!important}
+  .btn{text-decoration:none;display:inline-block;border:none;border-radius:8px;padding:8px 16px;font-weight:800;cursor:pointer;background:var(--accent);color:#fff}
   .btn.g{background:#fff;color:var(--ink);border:1px solid var(--line)}
   .empty{background:var(--paper);border-radius:12px;padding:40px 20px;text-align:center;color:var(--sub);width:100%;max-width:794px}
   .page{background:#fff;width:794px;max-width:100%;min-height:1123px;padding:34px 38px;box-shadow:0 4px 18px rgba(27,35,64,.14);font-size:14px;line-height:1.55;color:#111}
@@ -146,8 +147,8 @@
 
   <main class="viewer">
     <div class="toolbar">
-      <button type="button" class="btn g" id="btn-reload">最新に更新</button>
-      <button type="button" class="btn" id="btn-print" disabled>印刷／PDF保存</button>
+      <!-- 2026-11-25：「最新に更新」「印刷／PDF保存」はいったん外し、職員配置シミュレーションへのリンクを置く（シミュレーションがある園の申請を選んだときだけ表示） -->
+      <a class="btn" id="btn-haichi" href="#" target="_blank" rel="noopener" hidden>職員配置シミュレーション</a>
     </div>
     <div class="empty" id="empty">左の一覧から申請を選ぶと、A4・1枚の確認表が表示されます。</div>
     <article class="page hidden" id="page"></article>
@@ -235,8 +236,8 @@
   }
   document.querySelectorAll('.chip').forEach(b=>b.onclick=()=>{document.querySelectorAll('.chip').forEach(x=>x.classList.toggle('on',x===b));FILTER=b.dataset.f;renderList();});
   $('list').addEventListener('click',e=>{const b=e.target.closest('.item'); if(!b) return; const i=ITEMS.find(x=>String(x.id)===b.dataset.id); if(i) open(i);});
-  $('btn-reload').onclick=load;
-  $('btn-print').onclick=()=>window.print();
+  /* 職員配置シミュレーションがある園（施設コード → ページ） */
+  const HAICHI={S09:'haichi-fureai.html'};
   /* 印刷：長い申請でもA4・1枚に収まるよう、縮小して印刷する */
   const A4H=1110;
   window.addEventListener('beforeprint',()=>{ const pg=$('page'); pg.style.zoom=''; pg.style.width='794px';
@@ -275,7 +276,7 @@
 
   function open(i){
     CUR=i; renderList();
-    $('empty').classList.add('hidden'); $('page').classList.remove('hidden'); $('btn-print').disabled=false;
+    $('empty').classList.add('hidden'); $('page').classList.remove('hidden'); { const hp=HAICHI[String(i.r['施設コード']||'')]; const b=$('btn-haichi'); if(hp){ b.href=hp; b.hidden=false; } else b.hidden=true; }
     $('page').innerHTML=i.kind==='pre'?preDoc(i.r):kDoc(i.r);
     if(i.kind==='pre'){ const h=haichi(i.r); PRE_CTX={need:h.need,hf:hireFte(i.r),fteApp:num(i.r['現在FTE']),skipped:h.skipped}; fillNowFte(i.r); }
     window.scrollTo({top:0,behavior:'smooth'});
