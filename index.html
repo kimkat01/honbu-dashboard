@@ -883,16 +883,23 @@
   <section>
     <div class="grid">
 
-      <!-- しおどめひろば 入室状況（2026-11-01）：ひろば（staff-dashboard/hiroba/）に、だれが・いつ・どのアバターで入ったかの一覧
-           （このリポジトリの hiroba-monitor.html）。記録は GAS「しおどめひろば 通信」（cryk0289）のシート「入室記録」にたまる。
-           本部アカウントでログインしたときだけ表示される。2026-11-04：会話と本音ボードも本人つきで表示
-           2026-11-12：いったん削除したが、おととい（11/10）の状態に戻した -->
-      <a class="card" href="hiroba-monitor.html" target="_blank" rel="noopener">
-        <span class="pill warn">本部限定</span>
-        <div class="icon c-teal">🐾</div>
-        <div class="title">しおどめひろば 入室状況</div>
-        <div class="desc">入室・話した言葉・本音ボードの記録（本名つき）</div>
-      </a>
+      <!-- ジョブメドレー（2026-11-21）：2026-11-25「しおどめひろば 入室状況」カードを削除し、その位置へ移動。
+           事業者管理画面のメッセージ（応募者とのやりとり）を開く
+           ・IDは学法（学校法人柴学園）と社福（社会福祉法人雄雅会）の2つ。どちらのボタンも同じメッセージ画面を別タブで開く
+           ・Windows（Chrome等）では社福だけ Microsoft Edge で開く（ブラウザごとにログインが別なのでログアウト不要。2026-11-21）
+           ・Mac等では、ジョブメドレーは1つのブラウザで同時に1つのIDしかログインできないため、前回と違う法人のボタンを押したときだけ
+             「ログアウトして入り直してください」の確認を出してから開く（前回押した法人はこのPCのブラウザに記録）
+           ・ID・パスワードはこのページには書かない（ブラウザのパスワード保存機能に2つとも保存して使う） -->
+      <div class="card card-split" id="jmCard">
+        <div class="icon c-orange">✉️</div>
+        <div class="title">ジョブメドレー</div>
+        <div class="desc">応募者とのメッセージを確認</div>
+        <div class="law-btns">
+          <a class="law-btn law-gakuho jm-btn" data-law="gakuho" href="https://customers.job-medley.com/customers/messages" target="_blank" rel="noopener" title="学校法人柴学園のIDで開く">学法</a>
+          <a class="law-btn law-shafuku jm-btn" data-law="shafuku" href="https://customers.job-medley.com/customers/messages" target="_blank" rel="noopener" title="社会福祉法人雄雅会のIDで開く">社福</a>
+        </div>
+        <div class="jm-last" id="jmLast">前回開いたID：—</div>
+      </div>
 
       <!-- AIメンタルカウンセリング（2026-11-12）：ANSHIN KUN のAIメンタルカウンセリングの相談記録
            スプレッドシート「AIカウンセリング記録」（cryk0289）のシート「記録」。日時・園・氏名・相談内容・AIの返答が残る
@@ -928,28 +935,6 @@
       </a>
 
       <!-- 2026-11-20：しおどめねほりんぱほりん（試作）は中止。入室状況カードを外した -->
-
-    </div>
-  </section>
-  <section>
-    <div class="grid">
-
-      <!-- ジョブメドレー（2026-11-21）：事業者管理画面のメッセージ（応募者とのやりとり）を開く
-           ・IDは学法（学校法人柴学園）と社福（社会福祉法人雄雅会）の2つ。どちらのボタンも同じメッセージ画面を別タブで開く
-           ・Windows（Chrome等）では社福だけ Microsoft Edge で開く（ブラウザごとにログインが別なのでログアウト不要。2026-11-21）
-           ・Mac等では、ジョブメドレーは1つのブラウザで同時に1つのIDしかログインできないため、前回と違う法人のボタンを押したときだけ
-             「ログアウトして入り直してください」の確認を出してから開く（前回押した法人はこのPCのブラウザに記録）
-           ・ID・パスワードはこのページには書かない（ブラウザのパスワード保存機能に2つとも保存して使う） -->
-      <div class="card card-split" id="jmCard">
-        <div class="icon c-orange">✉️</div>
-        <div class="title">ジョブメドレー</div>
-        <div class="desc">応募者とのメッセージを確認</div>
-        <div class="law-btns">
-          <a class="law-btn law-gakuho jm-btn" data-law="gakuho" href="https://customers.job-medley.com/customers/messages" target="_blank" rel="noopener" title="学校法人柴学園のIDで開く">学法</a>
-          <a class="law-btn law-shafuku jm-btn" data-law="shafuku" href="https://customers.job-medley.com/customers/messages" target="_blank" rel="noopener" title="社会福祉法人雄雅会のIDで開く">社福</a>
-        </div>
-        <div class="jm-last" id="jmLast">前回開いたID：—</div>
-      </div>
 
     </div>
   </section>
