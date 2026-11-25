@@ -1023,7 +1023,7 @@
       // 決裁承認などから「ログインしてから戻る」で来たときは、元の画面へ戻す（同じフォルダ内のページだけ）
       if (withAuth) {
         var next = new URLSearchParams(location.search).get('next') || '';
-        if (/^(kessai-shonin|hp-preview)\.html(\?[\w=&%.\-]*)?$/.test(next)) location.replace(next);
+        if (/^(kessai-shonin|hp-preview|saiyo-check)\.html(\?[\w=&%.\-]*)?$/.test(next)) location.replace(next);
       }
     }
     function lock() {

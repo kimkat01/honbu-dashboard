@@ -125,8 +125,8 @@
 
 <div class="gate hidden" id="gate">
   <p style="font-size:17px;font-weight:800;margin:0 0 8px">本部専用ページです</p>
-  <p class="note" style="font-size:14px">本部ダッシュボードにログインしてから、「採用計画承認」のカードを開いてください。</p>
-  <p><a href="index.html">本部ダッシュボードを開く ›</a></p>
+  <p class="note" style="font-size:14px">ログインの有効期限（12時間）が切れているか、まだログインしていません。<br>下のボタンからログインすると、この確認表に戻ってきます。</p>
+  <p><a href="index.html?next=saiyo-check.html">ログインする ›</a></p>
 </div>
 
 <div class="wrap hidden" id="app">
@@ -165,8 +165,15 @@
   const r1=v=>Math.round(v*100)/100;
 
   /* ---- 本部ログインの確認（本部ダッシュボードと同じ通行証） ---- */
+  /* ログインの確認（2026-11-25 修正）：通行証（honbu_token）が有効、または本部ダッシュボードを開いた目印（sd_honbu_viewer）が12時間以内ならOK。
+     通行証の期限は数字でも日付の文字でも読めるようにする */
   function loggedIn(){
-    try{ const t=JSON.parse(localStorage.getItem('honbu_token')||'null'); return !!(t&&t.token&&t.exp>Date.now()); }catch(e){ return false; }
+    try{
+      const t=JSON.parse(localStorage.getItem('honbu_token')||'null');
+      if(t&&t.token){ const exp=typeof t.exp==='number'?t.exp:Date.parse(t.exp); if(!exp||exp>Date.now()) return true; }
+    }catch(e){}
+    try{ const v=Number(localStorage.getItem('sd_honbu_viewer')||0); if(v&&Date.now()-v<12*60*60*1000) return true; }catch(e){}
+    return false;
   }
   if(!loggedIn()){ $('gate').classList.remove('hidden'); return; }
   $('app').classList.remove('hidden');
