@@ -155,6 +155,8 @@
 (function(){
   'use strict';
   const GAS='https://script.google.com/macros/s/AKfycbzccLc5Pb4u_SoH4QAjSZyWZBmpmoGSMowK8HShbxkdP6_9NjztdNqYT0pMb4XK6Z9cKA/exec';
+  /* 職員内訳API（2026-11-25）：園ごとの今の保育士の内訳（正規・パートの人数と常勤換算）を職員マスタから返すGAS。cryk0289「職員内訳API」 */
+  const SUMMARY_GAS='__SUMMARY_GAS_URL__';
   const CODES=['S01','S02','S03','S04','S05','S06','S07','S08','S09','S10','S11','S12','S13','S14','Y01','Y02','Y03'];
   /* 年齢別の定員（2026年度）。出典：ドライブ「1114_定員数.xlsx」の「2026」シート（2026-11-25 転記）
      ・年度が変わったら、ここを新しい年度の定員に書き換える
@@ -306,15 +308,15 @@
         <table><tr><th>施設種別</th><td>${esc(h.typ)}</td></tr>
           <tr><th>必要数</th><td><b>${h.need}人</b></td></tr>
           <tr><th>現在の常勤換算<br><small>（申請時）</small></th><td><b>${fte}人</b></td></tr>
-          <tr><th>今日時点の<br>常勤換算</th><td id="now-fte">確認中…</td></tr>
+          <tr><th>現状の常勤換算<br><small>（今日時点）</small></th><td id="now-fte">確認中…</td></tr>
           <tr><th>過不足（申請時）</th><td><b style="color:${short?'#b02a2a':'#17784a'}">${short?diff+'人 不足':'充足（余裕 '+Math.abs(diff)+'人）'}</b></td></tr></table>
       </div>
       <div class="judge">
         <div class="box ${short?'ng':'ok'}"><div class="k">いま（申請時）</div><div class="v">${short?diff+'人 不足':'充足'}</div><div class="expl" style="color:inherit">必要 ${h.need}人 ／ 現在 ${fte}人</div></div>
-        <div class="box neu"><div class="k">この採用で増える常勤換算</div><div class="v">＋${hf.total}人</div><div class="expl">${esc(hf.how)} × ${hf.hc}人</div></div>
-        <div class="box ${diffAfter>0?'ng':'ok'}"><div class="k">採用後の見込み</div><div class="v">${diffAfter>0?diffAfter+'人 不足':'充足'}</div><div class="expl" style="color:inherit">必要 ${h.need}人 ／ 採用後 ${after}人</div></div>
+        <div class="box neu" style="flex:1.6"><div class="k">現状の保育士（職員マスタ・今日時点）</div><div id="now-staff" class="expl">確認中…</div></div>
+        <div class="box ${diffAfter>0?'ng':'ok'}"><div class="k">採用後の見込み（申請時の数で計算）</div><div class="v">${diffAfter>0?diffAfter+'人 不足':'充足'}</div><div class="expl" style="color:inherit">必要 ${h.need}人 ／ 採用後 ${after}人<br>（${esc(hf.part?'パート':'正規')} ${hf.hc}人＝常勤換算 ${hf.total}人分を足す）</div></div>
       </div>
-      <div class="expl">※常勤換算＝週の所定労働時間÷40時間（週40時間の人が1.0人、週20時間の人が0.5人）。保育士資格があり保育業務に専従している在職職員を合計した数です（職員マスタより。園長・事務・調理などは含みません）。必要人数は年齢ごとに「在籍数÷基準」を切り上げて合計しています。</div>`;
+      <div class="expl">※常勤換算＝週の所定労働時間÷40時間（週40時間の人が1.0人、週20時間の人が0.5人）。保育士資格があり保育業務に専従している在職職員を合計した数です（職員マスタより。園長・事務・調理などは含みません）。パートは、雇用区分が正規以外、または役職がパート・補助・支援員の人です。必要人数は年齢ごとに「在籍数÷基準」を切り上げて合計しています。</div>`;
     }
     return head('採用前申請 確認表',r,'申請ID',`申請者：${esc(r['申請者（園長）']||'')}（園長）`)+`
       <div class="sum">
@@ -343,14 +345,30 @@
       <table class="memo"><tr><th>判定</th><td>${esc(stText(r['ステータス']))}${has(r['本部確認者'])?'　確認者：'+esc(r['本部確認者']):''}${has(r['本部確認日時'])?'　'+esc(r['本部確認日時']):''}　　□ 可決　　□ 相談</td></tr>
         <tr><th>本部コメント</th><td>${esc(r['本部コメント']||'')}</td></tr></table>`;
   }
-  /* 今日時点の常勤換算（職員マスタの最新）を採用申請のGASから読む */
+  /* 現状の保育士（職員マスタの最新）：正規・パートの人数と常勤換算を「職員内訳API」から読む（2026-11-25） */
   function fillNowFte(r){
-    const code=String(r['施設コード']||''); const el=()=>$('now-fte');
+    const code=String(r['施設コード']||'');
+    const el=()=>$('now-fte'), box=()=>$('now-staff');
     if(!code||!el()) return;
-    const show=v=>{ if(!el()) return; el().innerHTML=v===null||v===undefined?'<span class="note">職員マスタに未登録</span>':`<b>${v}人</b>　<span class="note">（職員マスタ・今日時点）</span>`; };
+    const fail=msg=>{ if(el()) el().innerHTML=`<span class="note">${msg}</span>`; if(box()) box().innerHTML=`<span class="note">${msg}</span>`; };
+    const f2=v=>Number(v||0).toFixed(2);
+    const show=s0=>{
+      if(!el()) return;
+      const s=s0&&s0.total?{...s0,seiki:{...s0.seiki,fte:f2(s0.seiki.fte)},part:{...s0.part,fte:f2(s0.part.fte)},total:{...s0.total,fte:f2(s0.total.fte)}}:s0;
+      if(!s||!s.total||!s.total.n){ fail('職員マスタに未登録'); return; }
+      el().innerHTML=`<b>${s.total.fte}人</b><br><small>正規 ${s.seiki.n}人（${s.seiki.fte}）＋パート ${s.part.n}人（${s.part.fte}）</small>`;
+      const notes=[]; if(s.noHours) notes.push(`週の時間が未入力 ${s.noHours}人（常勤換算に入っていません）`); if(s.excluded) notes.push(`対象外 ${s.excluded}人（育休中など）`); if(s.others) notes.push(`保育士として数えない職員 ${s.others}人（園長・事務・調理など）`);
+      box().innerHTML=`<table style="margin-top:4px;background:#fff"><tr><th style="width:auto"></th><th style="width:auto;text-align:center">人数</th><th style="width:auto;text-align:center">常勤換算</th></tr>
+        <tr><td>正規職員</td><td class="num">${s.seiki.n}人</td><td class="num">${s.seiki.fte}</td></tr>
+        <tr><td>パート</td><td class="num">${s.part.n}人</td><td class="num">${s.part.fte}</td></tr>
+        <tr><th>合計</th><th class="num">${s.total.n}人</th><th class="num">${s.total.fte}</th></tr></table>
+        ${notes.length?`<div class="expl">${notes.map(esc).join('／')}</div>`:''}`;
+    };
     if(code in fteCache){ show(fteCache[code]); return; }
-    get('action=init&facility='+encodeURIComponent(code)).then(it=>{ fteCache[code]=it&&it.fte!==undefined?it.fte:null; show(fteCache[code]); })
-      .catch(()=>{ if(el()) el().innerHTML='<span class="note">読み込めませんでした</span>'; });
+    if(/^__/.test(SUMMARY_GAS)){ fail('準備中'); return; }
+    fetch(SUMMARY_GAS+'?action=summary&facility='+encodeURIComponent(code)+'&t='+Date.now(),{redirect:'follow'}).then(x=>x.text()).then(t=>{
+      const j=JSON.parse(t); if(j.result!=='success') throw new Error(j.message); fteCache[code]=j.items; show(j.items); })
+      .catch(()=>fail('読み込めませんでした'));
   }
 
   /* ---- ②応募者決裁 ---- */
