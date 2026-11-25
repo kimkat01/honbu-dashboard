@@ -80,7 +80,7 @@ button:hover{background:var(--accent);color:var(--surface)}
   <p class="sub">期間：2026年10月16日〜11月15日（10月度の1か月）／園児はコドモン登降園の実績（10月・11月）、職員はコドモンの10月度シフト一覧（時刻入り）から計算</p>
 </header>
 
-<section class="card warn" id="assume">
+<section class="card warn" id="assume" hidden>
   <h2>計算の前提</h2>
   <ul class="find">
     <li>クラスの年齢は、うずら＝0歳、きじ＝1歳、かも＝2歳、ひばり＝3歳、つばめ＝4歳、はやぶさ＝5歳です。</li>
@@ -93,19 +93,19 @@ button:hover{background:var(--accent);color:var(--surface)}
   </ul>
 </section>
 
-<section class="card">
+<section class="card" hidden>
   <h2>国基準と適正配置（クラスごと）</h2>
   <p id="kokuLine" style="font-size:16px;font-weight:700;margin:0 0 8px"></p>
   <div class="scroll"><table class="avg" id="kokuTable"></table></div>
   <p class="note" id="kokuNote"></p>
 </section>
 
-<section class="card">
+<section class="card" hidden>
   <h2>わかったこと</h2>
   <ul class="find" id="findings"></ul>
 </section>
 
-<section class="card">
+<section class="card" hidden>
   <h2>前提条件（変更するとすぐ再計算）</h2>
   <div class="settings">
     <fieldset>
