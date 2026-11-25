@@ -156,6 +156,18 @@
   'use strict';
   const GAS='https://script.google.com/macros/s/AKfycbzccLc5Pb4u_SoH4QAjSZyWZBmpmoGSMowK8HShbxkdP6_9NjztdNqYT0pMb4XK6Z9cKA/exec';
   const CODES=['S01','S02','S03','S04','S05','S06','S07','S08','S09','S10','S11','S12','S13','S14','Y01','Y02','Y03'];
+  /* 年齢別の定員（2026年度）。出典：ドライブ「1114_定員数.xlsx」の「2026」シート（2026-11-25 転記）
+     ・年度が変わったら、ここを新しい年度の定員に書き換える
+     ・null はその年齢の受け入れなし。こども園（S01）の3〜5歳は 2号＋1号 の合計（内訳を note に） */
+  const TEIIN_YEAR='2026年度';
+  const TEIIN={
+    S01:{a:[null,20,20,44,42,42],note:{3:'2号26・1号18',4:'2号24・1号18',5:'2号24・1号18'}},
+    S02:{a:[3,6,12,17,17,15]}, S03:{a:[null,9,9,null,null,null]}, S04:{a:[3,10,6,null,null,null]},
+    S05:{a:[3,8,8,null,null,null]}, S06:{a:[3,8,8,null,null,null]}, S07:{a:[null,8,11,null,null,null]},
+    S08:{a:[6,6,6,null,null,null]}, S09:{a:[9,12,15,18,18,18]}, S10:{a:[null,12,18,20,20,20]},
+    S11:{a:[15,20,25,30,30,30]}, S12:{a:[3,8,8,null,null,null]}, S13:{a:[null,9,10,null,null,null]},
+    S14:{a:[3,6,12,12,12,12]}, Y01:{a:[9,12,12,14,14,14]}, Y02:{a:[9,12,15,18,18,18]}, Y03:{a:[3,5,5,19,19,19]}
+  };
   const $=id=>document.getElementById(id);
   const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
   const num=v=>{const n=Number(String(v??'').replace(/[¥,円\s]/g,''));return isFinite(n)?n:0;};
@@ -274,6 +286,8 @@
   /* ---- ①採用前申請 ---- */
   function preDoc(r){
     const h=haichi(r), hf=hireFte(r);
+    const tei=TEIIN[String(r['施設コード']||'')]||{a:[null,null,null,null,null,null]};
+    const teiSum=tei.a.reduce((s,v)=>s+(v||0),0), nSum=h.rows.reduce((s,x)=>s+x.n,0);
     const fte=num(r['現在FTE']), diff=r1(h.need-fte), after=r1(fte+hf.total), diffAfter=r1(h.need-after);
     const short=diff>0;
     const job=`${r['職種']||''}${has(r['雇用形態'])&&!String(r['職種']).includes(r['雇用形態'])?'（'+r['雇用形態']+'）':''}`;
@@ -284,10 +298,11 @@
       h_html=`<div class="expl">保育士以外の採用のため、配置基準の確認は省略されています。</div>`;
     }else{
       h_html=`<div class="two">
-        <table class="grid"><tr><th>年齢</th><th>在籍</th><th>基準</th><th>必要人数</th></tr>
-          ${h.rows.map(x=>`<tr><td>${x.a}歳児</td><td class="num">${x.n}人</td><td>${x.ratio}:1</td><td class="num">${x.need}人</td></tr>`).join('')}
-          ${h.ad.map(a=>`<tr><td colspan="3" style="text-align:left">${esc(a[0])}</td><td class="num">+${a[1]}人</td></tr>`).join('')}
-          <tr><th colspan="3" style="text-align:left">必要な保育士（常勤換算）</th><th class="num">${h.need}人</th></tr></table>
+        <table class="grid"><tr><th>年齢</th><th>定員<br><small>（${TEIIN_YEAR}）</small></th><th>在籍</th><th>基準</th><th>必要人数</th></tr>
+          ${h.rows.map(x=>`<tr><td>${x.a}歳児</td><td class="num">${tei.a[x.a]==null?'—':tei.a[x.a]+'人'}${tei.note&&tei.note[x.a]?`<br><small>${tei.note[x.a]}</small>`:''}</td><td class="num"${tei.a[x.a]!=null&&x.n>tei.a[x.a]?' style="color:#b02a2a;font-weight:800"':''}>${x.n}人</td><td>${x.ratio}:1</td><td class="num">${x.need}人</td></tr>`).join('')}
+          <tr><td>合計</td><td class="num">${teiSum?teiSum+'人':'—'}</td><td class="num">${nSum}人${teiSum?`<br><small>充足率 ${Math.round(nSum/teiSum*100)}%</small>`:''}</td><td></td><td class="num">${h.base}人</td></tr>
+          ${h.ad.map(a=>`<tr><td colspan="4" style="text-align:left">${esc(a[0])}</td><td class="num">+${a[1]}人</td></tr>`).join('')}
+          <tr><th colspan="4" style="text-align:left">必要な保育士（常勤換算）</th><th class="num">${h.need}人</th></tr></table>
         <table><tr><th>施設種別</th><td>${esc(h.typ)}</td></tr>
           <tr><th>必要数</th><td><b>${h.need}人</b></td></tr>
           <tr><th>現在の常勤換算<br><small>（申請時）</small></th><td><b>${fte}人</b></td></tr>
