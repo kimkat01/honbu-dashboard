@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>採用申請 確認表｜本部ダッシュボード</title>
+<!--
+  採用申請 確認表（2026-11-25 新規）
+  ・理事長・本部が、園長から出た採用申請（①採用前申請・②応募者決裁）を1件ずつ A4・1枚の書類の形で確認するページ
+  ・データは「採用申請システム」のGAS（listStage1 / listStage2 / init）から読むだけ。スプレッドシートには書き込まない
+  ・可否（可決・相談）の入力は、これまでどおりスプレッドシートのステータス列で行う（右上のボタンから開ける）
+  ・本部ダッシュボードにログインしているときだけ開ける（通行証 honbu_token を確認）
+  ・常勤換算＝週の所定労働時間÷40時間。保育士資格があり保育業務に専従している在職職員の合計（職員マスタ）
+-->
+<style>
+  :root{
+    --bg:#e9edf4; --paper:#ffffff; --ink:#1b2340; --sub:#5f667f; --line:#c9cfdc; --line2:#e3e7ef;
+    --head-a:#1b2340; --head-b:#2c3760; --accent:#3a63d8; --accent-pale:#e8eefc;
+    --ok:#17784a; --ok-bg:#e3f4ea; --ng:#b02a2a; --ng-bg:#fbe7e7; --warn:#8a5d06; --warn-bg:#fdf2dc;
+    --font:"Hiragino Kaku Gothic ProN","Hiragino Sans","Yu Gothic","Meiryo",system-ui,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{font-family:var(--font);background:var(--bg);color:var(--ink);font-size:15px;line-height:1.6;min-height:100vh}
+  button,select{font-family:inherit;font-size:inherit}
+  .hidden{display:none!important}
+
+  header{background:linear-gradient(120deg,var(--head-a),var(--head-b));color:#f6f7fb;padding:12px 20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  header h1{margin:0;font-size:19px;font-weight:800;letter-spacing:.04em}
+  .home{color:#f6f7fb;text-decoration:none;font-size:14px;font-weight:700;border:1px solid rgba(255,255,255,.25);border-radius:999px;padding:5px 14px}
+  .home:hover{background:rgba(255,255,255,.1)}
+  .hspacer{flex:1}
+  .hbtn{color:#fff;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);border-radius:8px;padding:6px 12px;font-weight:700;text-decoration:none;font-size:14px;cursor:pointer}
+  .hbtn:hover{background:rgba(255,255,255,.2)}
+
+  .wrap{max-width:1280px;margin:0 auto;padding:16px;display:grid;grid-template-columns:340px 1fr;gap:16px;align-items:start}
+  @media (max-width:900px){.wrap{grid-template-columns:1fr}}
+
+  /* 一覧 */
+  .side{background:var(--paper);border-radius:12px;box-shadow:0 2px 8px rgba(27,35,64,.08);padding:12px;position:sticky;top:12px;max-height:calc(100vh - 24px);display:flex;flex-direction:column;gap:10px}
+  @media (max-width:900px){.side{position:static;max-height:none}}
+  .filters{display:flex;gap:6px;flex-wrap:wrap}
+  .chip{border:1px solid var(--line);background:#fff;border-radius:999px;padding:4px 12px;font-size:14px;font-weight:700;color:var(--sub);cursor:pointer}
+  .chip.on{background:var(--accent);border-color:var(--accent);color:#fff}
+  .list{overflow-y:auto;display:flex;flex-direction:column;gap:6px;min-height:80px}
+  .item{display:block;width:100%;text-align:left;background:#fff;border:1px solid var(--line2);border-radius:10px;padding:8px 10px;cursor:pointer;color:inherit}
+  .item:hover{border-color:var(--accent)}
+  .item.on{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-pale)}
+  .item .t{font-weight:800;font-size:14px;line-height:1.45}
+  .item .m{font-size:13px;color:var(--sub);display:flex;justify-content:space-between;gap:6px;margin-top:2px}
+  .st{display:inline-block;font-size:12px;font-weight:800;border-radius:999px;padding:1px 9px;white-space:nowrap}
+  .st.wait{background:var(--warn-bg);color:var(--warn)}
+  .st.ok{background:var(--ok-bg);color:var(--ok)}
+  .st.talk{background:var(--accent-pale);color:var(--accent)}
+  .st.ng{background:var(--ng-bg);color:var(--ng)}
+  .note{font-size:13px;color:var(--sub)}
+  .err{background:var(--ng-bg);color:var(--ng);border-radius:8px;padding:8px 10px;font-size:14px;font-weight:700}
+
+  /* 書類（A4） */
+  .viewer{display:flex;flex-direction:column;gap:10px;align-items:center}
+  .toolbar{width:100%;max-width:794px;display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+  .btn{border:none;border-radius:8px;padding:8px 16px;font-weight:800;cursor:pointer;background:var(--accent);color:#fff}
+  .btn.g{background:#fff;color:var(--ink);border:1px solid var(--line)}
+  .empty{background:var(--paper);border-radius:12px;padding:40px 20px;text-align:center;color:var(--sub);width:100%;max-width:794px}
+  .page{background:#fff;width:794px;max-width:100%;min-height:1123px;padding:34px 38px;box-shadow:0 4px 18px rgba(27,35,64,.14);font-size:12.5px;line-height:1.55;color:#111}
+  @media (max-width:860px){.page{padding:20px 16px;min-height:0}}
+  .doc-h{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;border-bottom:2.5px solid #1b2340;padding-bottom:8px}
+  .doc-h h2{margin:0;font-size:21px;letter-spacing:.08em}
+  .doc-h .sub{font-size:12px;color:#444;margin-top:2px}
+  .doc-h .meta{font-size:11.5px;text-align:right;color:#333;line-height:1.5}
+  .stamp{display:inline-block;margin-top:4px;border:2px solid currentColor;border-radius:6px;padding:1px 10px;font-weight:800;font-size:14px}
+  .stamp.wait{color:#a86b00}.stamp.ok{color:#17784a}.stamp.talk{color:#3a63d8}.stamp.ng{color:#b02a2a}
+
+  .sum{display:grid;grid-template-columns:repeat(4,1fr);border:1px solid #999;margin-top:10px}
+  .sum>div{padding:6px 8px;border-right:1px solid #ccc}
+  .sum>div:last-child{border-right:none}
+  .sum .k{font-size:10.5px;color:#555;font-weight:700}
+  .sum .v{font-size:15px;font-weight:800}
+  @media (max-width:600px){.sum{grid-template-columns:1fr 1fr}.sum>div:nth-child(2){border-right:none}.sum>div:nth-child(-n+2){border-bottom:1px solid #ccc}}
+
+  h3{font-size:13.5px;margin:14px 0 5px;padding:3px 8px;background:#1b2340;color:#fff;border-radius:3px;letter-spacing:.04em;display:flex;justify-content:space-between;align-items:center;gap:8px}
+  h3 small{font-weight:400;font-size:11px;opacity:.85}
+  table{border-collapse:collapse;width:100%}
+  th,td{border:1px solid #aaa;padding:4px 7px;vertical-align:top;text-align:left}
+  th{background:#f0f2f7;font-weight:700;white-space:nowrap;width:9.5em}
+  td{white-space:pre-wrap;word-break:break-word}
+  .num{text-align:right;font-variant-numeric:tabular-nums}
+  table.grid th{width:auto;text-align:center}
+  table.grid td{text-align:center}
+  .judge{display:flex;gap:10px;align-items:stretch;margin-top:6px}
+  .judge .box{flex:1;border:2px solid;border-radius:6px;padding:6px 10px}
+  .judge .box .k{font-size:11px;font-weight:700}
+  .judge .box .v{font-size:18px;font-weight:800}
+  .judge .box.ok{border-color:#17784a;color:#17784a;background:#f1faf4}
+  .judge .box.ng{border-color:#b02a2a;color:#b02a2a;background:#fdf3f3}
+  .judge .box.neu{border-color:#3a63d8;color:#1b2340;background:#f4f7fe}
+  .expl{font-size:11px;color:#444;margin-top:4px;line-height:1.5}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  @media (max-width:600px){.two{grid-template-columns:1fr}}
+  .memo td{height:46px}
+  a.att{color:#2c4fb4;font-weight:700}
+
+  /* ログインしていないとき */
+  .gate{max-width:520px;margin:60px auto;background:var(--paper);border-radius:12px;padding:28px;text-align:center;box-shadow:0 2px 8px rgba(27,35,64,.08)}
+  .gate a{color:var(--accent);font-weight:800}
+
+  @media print{
+    @page{size:A4;margin:0}
+    body{background:#fff}
+    header,.side,.toolbar,.noprint{display:none!important}
+    .wrap{display:block;padding:0;max-width:none}
+    .viewer{display:block}
+    .page{box-shadow:none;width:794px;min-height:0;padding:30px 34px;margin:0;max-width:none}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <a class="home" href="index.html">‹ 本部ダッシュボード</a>
+  <h1>採用申請 確認表</h1>
+  <span class="hspacer"></span>
+  <a class="hbtn" href="https://docs.google.com/spreadsheets/d/1mNWDy1eQZUEbnJc0R8roaJ3SXcvnw9Ej4xbxXvDjQ4w/edit#gid=238150614" target="_blank" rel="noopener" title="可否（可決・相談）と本部コメントはスプレッドシートのステータス列に入力します">📝 可否を入力（スプレッドシート）</a>
+</header>
+
+<div class="gate hidden" id="gate">
+  <p style="font-size:17px;font-weight:800;margin:0 0 8px">本部専用ページです</p>
+  <p class="note" style="font-size:14px">本部ダッシュボードにログインしてから、「採用計画承認」のカードを開いてください。</p>
+  <p><a href="index.html">本部ダッシュボードを開く ›</a></p>
+</div>
+
+<div class="wrap hidden" id="app">
+  <aside class="side" aria-label="申請の一覧">
+    <div class="filters" role="group" aria-label="表示する申請">
+      <button type="button" class="chip on" data-f="wait">本部確認中</button>
+      <button type="button" class="chip" data-f="pre">採用前申請</button>
+      <button type="button" class="chip" data-f="k">応募者決裁</button>
+      <button type="button" class="chip" data-f="all">すべて</button>
+    </div>
+    <div class="note" id="load-note">申請を読み込んでいます…（17園分）</div>
+    <div class="list" id="list"></div>
+  </aside>
+
+  <main class="viewer">
+    <div class="toolbar">
+      <button type="button" class="btn g" id="btn-reload">最新に更新</button>
+      <button type="button" class="btn" id="btn-print" disabled>印刷／PDF保存</button>
+    </div>
+    <div class="empty" id="empty">左の一覧から申請を選ぶと、A4・1枚の確認表が表示されます。</div>
+    <article class="page hidden" id="page"></article>
+  </main>
+</div>
+
+<script>
+(function(){
+  'use strict';
+  const GAS='https://script.google.com/macros/s/AKfycbzccLc5Pb4u_SoH4QAjSZyWZBmpmoGSMowK8HShbxkdP6_9NjztdNqYT0pMb4XK6Z9cKA/exec';
+  const CODES=['S01','S02','S03','S04','S05','S06','S07','S08','S09','S10','S11','S12','S13','S14','Y01','Y02','Y03'];
+  const $=id=>document.getElementById(id);
+  const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const num=v=>{const n=Number(String(v??'').replace(/[¥,円\s]/g,''));return isFinite(n)?n:0;};
+  const yen=v=>'¥'+Math.round(num(v)).toLocaleString('ja-JP');
+  const has=v=>v!==undefined&&v!==null&&String(v).trim()!=='';
+  const yes=v=>v===true||/^(TRUE|true|はい|有|1)$/.test(String(v??'').trim());
+  const r1=v=>Math.round(v*100)/100;
+
+  /* ---- 本部ログインの確認（本部ダッシュボードと同じ通行証） ---- */
+  function loggedIn(){
+    try{ const t=JSON.parse(localStorage.getItem('honbu_token')||'null'); return !!(t&&t.token&&t.exp>Date.now()); }catch(e){ return false; }
+  }
+  if(!loggedIn()){ $('gate').classList.remove('hidden'); return; }
+  $('app').classList.remove('hidden');
+
+  function get(q){
+    return fetch(GAS+'?'+q+'&t='+Date.now(),{redirect:'follow'}).then(r=>r.text()).then(t=>{
+      const j=JSON.parse(t); if(j.result!=='success') throw new Error(j.message||'読み込みに失敗しました'); return j.items; });
+  }
+
+  /* ステータス：「否決」は使わない（画面では「相談」） */
+  const stText=s=>/否決|却下/.test(String(s||''))?'相談':(String(s||'').trim()||'本部確認中');
+  const stCls=s=>{s=stText(s); return /可決|採用決定|承認/.test(s)?'ok':/相談/.test(s)?'talk':/不採用/.test(s)?'ng':'wait';};
+  const isWait=s=>stCls(s)==='wait';
+
+  let ITEMS=[], FILTER='wait', CUR=null;
+  const fteCache={};
+
+  function load(){
+    $('load-note').textContent='申請を読み込んでいます…（17園分）'; $('list').innerHTML='';
+    let failed=0;
+    const one=(code,act)=>get('action='+act+'&facility='+code).catch(()=>{failed++;return [];});
+    return Promise.all(CODES.map(c=>Promise.all([one(c,'listStage1'),one(c,'listStage2')]))).then(res=>{
+      ITEMS=[];
+      res.forEach(([s1,s2])=>{
+        (s1||[]).forEach(r=>ITEMS.push({kind:'pre',id:r['申請ID'],r}));
+        (s2||[]).forEach(r=>ITEMS.push({kind:'k',id:r['決裁ID'],r}));
+      });
+      ITEMS.sort((a,b)=>String(b.r['提出日時']||'')<String(a.r['提出日時']||'')?-1:1);
+      $('load-note').innerHTML=failed?`<span class="err">一部の園を読み込めませんでした（${failed}件）。「最新に更新」を押してください。</span>`:`全${ITEMS.length}件（本部確認中 ${ITEMS.filter(i=>isWait(i.r['ステータス'])).length}件）`;
+      renderList();
+      if(CUR){ const again=ITEMS.find(i=>i.id===CUR.id); if(again) open(again); }
+    });
+  }
+  function renderList(){
+    const list=ITEMS.filter(i=>FILTER==='all'||(FILTER==='wait'&&isWait(i.r['ステータス']))||FILTER===i.kind);
+    $('list').innerHTML=list.length?list.map(i=>{
+      const r=i.r, st=stText(r['ステータス']);
+      const t=i.kind==='pre'?(r['申請タイトル']||`【${r['施設名']}】${r['職種']||''}採用の申請`):`【${r['施設名']}】応募者決裁：${r['応募者氏名']||''}さん`;
+      return `<button type="button" class="item${CUR&&CUR.id===i.id?' on':''}" data-id="${esc(i.id)}"><div class="t">${esc(t)}</div>
+        <div class="m"><span>${i.kind==='pre'?'採用前申請':'応募者決裁'}・${esc(String(r['提出日時']||'').slice(0,10))}</span><span class="st ${stCls(st)}">${esc(st)}</span></div></button>`;
+    }).join(''):'<div class="note">該当する申請はありません。</div>';
+  }
+  document.querySelectorAll('.chip').forEach(b=>b.onclick=()=>{document.querySelectorAll('.chip').forEach(x=>x.classList.toggle('on',x===b));FILTER=b.dataset.f;renderList();});
+  $('list').addEventListener('click',e=>{const b=e.target.closest('.item'); if(!b) return; const i=ITEMS.find(x=>String(x.id)===b.dataset.id); if(i) open(i);});
+  $('btn-reload').onclick=load;
+  $('btn-print').onclick=()=>window.print();
+  /* 印刷：長い申請でもA4・1枚に収まるよう、縮小して印刷する */
+  const A4H=1110;
+  window.addEventListener('beforeprint',()=>{ const pg=$('page'); pg.style.zoom=''; pg.style.width='794px';
+    const h=pg.scrollHeight; pg.style.width=''; if(h>A4H) pg.style.zoom=String(Math.floor(A4H/h*1000)/1000); });
+  window.addEventListener('afterprint',()=>{ $('page').style.zoom=''; });
+
+  /* ---- 配置基準（採用申請の画面と同じ計算） ---- */
+  function haichi(r){
+    const typ=String(r['施設種別']||'');
+    const ratio={0:3,1:yes(r['1歳改善加算'])?5:6,2:6,3:yes(r['3歳経過措置'])?20:15,4:yes(r['4_5歳経過措置'])?30:25,5:yes(r['4_5歳経過措置'])?30:25};
+    const rows=[0,1,2,3,4,5].map(a=>{const n=num(r['在籍'+a+'歳']);return {a,n,ratio:ratio[a],need:n?Math.ceil(n/ratio[a]):0};});
+    const base=rows.reduce((s,x)=>s+x.need,0);
+    const ad=[];
+    if(/shokibo|小規模/.test(typ)) ad.push(['小規模保育A型',1]);
+    if(yes(r['定員90人以下加配'])) ad.push(['定員90人以下加配',1]);
+    if(yes(r['標準時間認定加配'])) ad.push(['標準時間認定加配',1]);
+    if(yes(r['定員90人以下加配'])&&yes(r['標準時間認定加配'])) ad.push(['非常勤加配',1]);
+    const calc=Math.max(base+ad.reduce((s,x)=>s+x[1],0),2);
+    const need=has(r['配置基準必要数'])?num(r['配置基準必要数']):calc;
+    return {rows,ad,base,need,typ:/shokibo|小規模/.test(typ)?'小規模保育A型':/kodomo|こども園/.test(typ)?'幼保連携型認定こども園':typ==='ninka'||!typ?'認可保育所':typ,
+      skipped:!has(r['配置基準必要数'])&&!has(r['現在FTE'])};
+  }
+  /* 採用する人の常勤換算（正規＝1.0／パート＝週の時間÷40） */
+  function hireFte(r){
+    let calc=null; try{ calc=r['計算データ']?JSON.parse(r['計算データ']):null; }catch(e){}
+    const hc=num(r['採用予定人数'])||1;
+    const p=calc&&calc.p; const part=p?p.part:/パート/.test(String(r['雇用形態']||'')+String(r['職種']||''));
+    let per=1, how='正規職員 1人＝1.0';
+    if(part){
+      let wk=p&&p.hday&&p.days?p.hday*p.days:0;
+      if(!wk){ const m=String(r['勤務時間']||'').match(/週約?\s*([\d.]+)\s*時間/); if(m) wk=+m[1]; }
+      per=wk?wk/40:0; how=wk?`パート 週${wk}時間÷40＝${r1(per)}`:'パート（週の時間不明）';
+    }
+    return {hc,per:r1(per),total:r1(per*hc),how,part};
+  }
+
+  function open(i){
+    CUR=i; renderList();
+    $('empty').classList.add('hidden'); $('page').classList.remove('hidden'); $('btn-print').disabled=false;
+    $('page').innerHTML=i.kind==='pre'?preDoc(i.r):kDoc(i.r);
+    if(i.kind==='pre') fillNowFte(i.r);
+    window.scrollTo({top:0,behavior:'smooth'});
+  }
+
+  function head(title,r,idKey,who){
+    const st=stText(r['ステータス']);
+    return `<div class="doc-h"><div><h2>${title}</h2><div class="sub">${esc(r['施設名']||'')}　→　法人本部</div></div>
+      <div class="meta">受付番号：${esc(r[idKey]||'')}<br>提出日時：${esc(r['提出日時']||'')}<br>${who}<br><span class="stamp ${stCls(st)}">${esc(st)}</span></div></div>`;
+  }
+  const row=(k,v)=>has(v)?`<tr><th>${k}</th><td>${esc(v)}</td></tr>`:'';
+
+  /* ---- ①採用前申請 ---- */
+  function preDoc(r){
+    const h=haichi(r), hf=hireFte(r);
+    const fte=num(r['現在FTE']), diff=r1(h.need-fte), after=r1(fte+hf.total), diffAfter=r1(h.need-after);
+    const short=diff>0;
+    const job=`${r['職種']||''}${has(r['雇用形態'])&&!String(r['職種']).includes(r['雇用形態'])?'（'+r['雇用形態']+'）':''}`;
+    const ym=v=>{const m=String(v||'').match(/^(\d{4})-(\d{2})/);return m?`${m[1]}年${+m[2]}月`:String(v||'');};
+    const fy=num(r['人件費_年度末まで']), annual=num(r['想定年間人件費']), fee=num(r['採用経費（最大）']);
+    let h_html='';
+    if(h.skipped){
+      h_html=`<div class="expl">保育士以外の採用のため、配置基準の確認は省略されています。</div>`;
+    }else{
+      h_html=`<div class="two">
+        <table class="grid"><tr><th>年齢</th><th>在籍</th><th>基準</th><th>必要人数</th></tr>
+          ${h.rows.map(x=>`<tr><td>${x.a}歳児</td><td class="num">${x.n}人</td><td>${x.ratio}:1</td><td class="num">${x.need}人</td></tr>`).join('')}
+          ${h.ad.map(a=>`<tr><td colspan="3" style="text-align:left">${esc(a[0])}</td><td class="num">+${a[1]}人</td></tr>`).join('')}
+          <tr><th colspan="3" style="text-align:left">必要な保育士（常勤換算）</th><th class="num">${h.need}人</th></tr></table>
+        <table><tr><th>施設種別</th><td>${esc(h.typ)}</td></tr>
+          <tr><th>必要数</th><td><b>${h.need}人</b></td></tr>
+          <tr><th>現在の常勤換算<br><small>（申請時）</small></th><td><b>${fte}人</b></td></tr>
+          <tr><th>今日時点の<br>常勤換算</th><td id="now-fte">確認中…</td></tr>
+          <tr><th>過不足（申請時）</th><td><b style="color:${short?'#b02a2a':'#17784a'}">${short?diff+'人 不足':'充足（余裕 '+Math.abs(diff)+'人）'}</b></td></tr></table>
+      </div>
+      <div class="judge">
+        <div class="box ${short?'ng':'ok'}"><div class="k">いま（申請時）</div><div class="v">${short?diff+'人 不足':'充足'}</div><div class="expl" style="color:inherit">必要 ${h.need}人 ／ 現在 ${fte}人</div></div>
+        <div class="box neu"><div class="k">この採用で増える常勤換算</div><div class="v">＋${hf.total}人</div><div class="expl">${esc(hf.how)} × ${hf.hc}人</div></div>
+        <div class="box ${diffAfter>0?'ng':'ok'}"><div class="k">採用後の見込み</div><div class="v">${diffAfter>0?diffAfter+'人 不足':'充足'}</div><div class="expl" style="color:inherit">必要 ${h.need}人 ／ 採用後 ${after}人</div></div>
+      </div>
+      <div class="expl">※常勤換算＝週の所定労働時間÷40時間（週40時間の人が1.0人、週20時間の人が0.5人）。保育士資格があり保育業務に専従している在職職員を合計した数です（職員マスタより。園長・事務・調理などは含みません）。必要人数は年齢ごとに「在籍数÷基準」を切り上げて合計しています。</div>`;
+    }
+    return head('採用前申請 確認表',r,'申請ID',`申請者：${esc(r['申請者（園長）']||'')}（園長）`)+`
+      <div class="sum">
+        <div><div class="k">職種</div><div class="v">${esc(job)}</div></div>
+        <div><div class="k">採用予定人数</div><div class="v">${esc(r['採用予定人数']||'')}人</div></div>
+        <div><div class="k">入職希望</div><div class="v">${esc(ym(r['入職希望日'])||r['採用希望時期']||'—')}</div></div>
+        <div><div class="k">年間人件費（${esc(r['採用予定人数']||1)}人分）</div><div class="v">${annual?yen(annual):'—'}</div></div>
+      </div>
+      <h3>1. 配置基準の確認<small>${esc(r['配置基準の確認']||'')}</small></h3>
+      ${h_html}
+      <h3>2. 募集する理由・求める人物像</h3>
+      <table>${row('募集する理由',r['採用理由詳細']||r['採用理由'])}${row('求める人物像',r['求める保育士像'])}${row('業務内容',r['業務内容'])}</table>
+      <h3>3. 求人の条件</h3>
+      <table>${row('給与',r['給与'])}${row('勤務時間',r['勤務時間'])}${row('待遇',r['待遇'])}${row('応募条件',r['応募条件'])}</table>
+      <h3>4. 費用</h3>
+      <table>
+        ${row('想定年収（1人）',has(r['想定年収（1人）'])?yen(r['想定年収（1人）']):'')}
+        ${row('年収の内訳',r['人件費シミュレーション内訳'])}
+        ${row('人件費（年度末まで）',fy?yen(fy):'')}
+        ${row('人件費（年間）',annual?yen(annual):'')}
+        ${row('紹介会社等',r['利用予定の紹介会社等']||r['紹介会社_派遣を使うか'])}
+        ${row('採用経費（最大）',has(r['採用経費（最大）'])?yen(fee):'')}
+        ${annual?`<tr><th>初年度の合計（最大）</th><td><b>${yen(annual+fee)}</b>（年間人件費＋採用経費）</td></tr>`:''}
+      </table>
+      <h3>5. 本部の判断</h3>
+      <table class="memo"><tr><th>判定</th><td>${esc(stText(r['ステータス']))}${has(r['本部確認者'])?'　確認者：'+esc(r['本部確認者']):''}${has(r['本部確認日時'])?'　'+esc(r['本部確認日時']):''}　　□ 可決　　□ 相談</td></tr>
+        <tr><th>本部コメント</th><td>${esc(r['本部コメント']||'')}</td></tr></table>`;
+  }
+  /* 今日時点の常勤換算（職員マスタの最新）を採用申請のGASから読む */
+  function fillNowFte(r){
+    const code=String(r['施設コード']||''); const el=()=>$('now-fte');
+    if(!code||!el()) return;
+    const show=v=>{ if(!el()) return; el().innerHTML=v===null||v===undefined?'<span class="note">職員マスタに未登録</span>':`<b>${v}人</b>　<span class="note">（職員マスタ・今日時点）</span>`; };
+    if(code in fteCache){ show(fteCache[code]); return; }
+    get('action=init&facility='+encodeURIComponent(code)).then(it=>{ fteCache[code]=it&&it.fte!==undefined?it.fte:null; show(fteCache[code]); })
+      .catch(()=>{ if(el()) el().innerHTML='<span class="note">読み込めませんでした</span>'; });
+  }
+
+  /* ---- ②応募者決裁 ---- */
+  function kDoc(r){
+    const pre=ITEMS.find(i=>i.kind==='pre'&&i.id===r['紐づく申請ID']);
+    const files=String(r['履歴書URL']||'').split(/\n+/).filter(x=>x.trim()).map(x=>{const m=x.match(/https?:\/\/\S+/); if(!m) return esc(x);
+      const label=x.replace(m[0],'').replace(/[：:\s]+$/,'').trim()||'ファイルを開く'; return `<a class="att" href="${esc(m[0])}" target="_blank" rel="noopener">${esc(label)}</a>`;}).join('<br>');
+    const diff=r['①との相違有無']==='あり';
+    return head('応募者決裁 確認表',r,'決裁ID',`記入者：${esc(r['記入者']||'')}`)+`
+      <div class="sum">
+        <div><div class="k">応募者</div><div class="v">${esc(r['応募者氏名']||'')}さん</div></div>
+        <div><div class="k">職種</div><div class="v">${esc(r['確定雇用形態']||'')}</div></div>
+        <div><div class="k">入職日</div><div class="v">${esc(r['入職日']||'—')}</div></div>
+        <div><div class="k">年間人件費</div><div class="v">${has(r['人件費_年間'])?yen(r['人件費_年間']):'—'}</div></div>
+      </div>
+      <h3>1. もとになった採用前申請<small>${pre?esc(stText(pre.r['ステータス'])):''}</small></h3>
+      <table>${row('申請',r['採用前申請タイトル']||r['紐づく申請ID'])}
+        ${pre?row('配置基準（申請時）',pre.r['配置基準の確認'])+row('予定していた条件',[pre.r['職種'],pre.r['給与'],pre.r['勤務時間']].filter(has).join('\n')):''}
+        <tr><th>採用前申請との相違</th><td><b style="color:${diff?'#b02a2a':'#17784a'}">${esc(r['①との相違有無']||'—')}</b>${diff&&has(r['相違内容'])?'\n'+esc(r['相違内容']):''}</td></tr></table>
+      <h3>2. 応募者と推薦理由</h3>
+      <table>${row('応募者氏名',r['応募者氏名'])}${row('面接日',r['面接日'])}${row('推薦する理由',r['推薦理由'])}
+        <tr><th>添付書類</th><td>${files||'なし'}</td></tr></table>
+      <h3>3. 採用条件と費用</h3>
+      <table>${row('職種',r['確定雇用形態'])}${row('給与',r['確定給与条件'])}${row('入職日',r['入職日'])}
+        ${row('想定年収（1人）',has(r['想定年収（1人）'])?yen(r['想定年収（1人）']):'')}
+        ${row('人件費（年度末まで）',has(r['人件費_年度末まで'])?yen(r['人件費_年度末まで']):'')}
+        ${row('人件費（年間）',has(r['人件費_年間'])?yen(r['人件費_年間']):'')}
+        ${row('採用経路',r['採用媒体'])}${row('紹介手数料',has(r['紹介手数料'])?yen(r['紹介手数料']):'')}</table>
+      <h3>4. 本部の判断</h3>
+      <table class="memo"><tr><th>判定</th><td>${esc(stText(r['ステータス']))}${has(r['決裁者'])?'　決裁者：'+esc(r['決裁者']):''}${has(r['決裁日時'])?'　'+esc(r['決裁日時']):''}　　□ 採用決定　　□ 相談</td></tr>
+        <tr><th>コメント</th><td>${esc(r['決裁コメント']||'')}</td></tr></table>`;
+  }
+
+  load();
+})();
+</script>
+</body>
+</html>
