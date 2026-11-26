@@ -31,6 +31,15 @@
      cryk0289 に閲覧以上の権限で共有しておくこと。
    ・2026-10-15：ご意見箱は職員ダッシュボードから「未対応」で書き込まれるため、
      「未対応」も未処理として数えるよう修正
+
+   【ご意見箱の返信（2026-11-26 追加）】
+   ・本部ダッシュボードの返信画面（goiken-reply.html）から、ご意見に返信する
+   ・返信の範囲は「投稿者本人のみ」「この園の職員」「全園の職員」の3つから選ぶ
+     - 本人のみ：これまでどおり「本部からの返信」列（H列）に書く（記名の投稿者の端末にだけ届く）
+     - この園／全園：上に加えて、ANSHIN KUN のご意見箱画面の「本部からの回答」に載る
+       （載るのは「公開用の質問文」と返信だけ。投稿者名・元の本文は載せない）
+   ・シートの右端に「返信範囲」「返信対象園」「公開用の質問文」「返信者」の列を自動で作る
+   ・※ cryk0289 に、ご意見箱スプレッドシートの【編集者】権限が必要（閲覧者のままだと書き込めない）
    ============================================================ */
 
 /* ---------- 本部の3人（ここだけ書き換える） ---------- */
@@ -72,6 +81,15 @@ var CONFIG = {
   kessai: null
 };
 
+/* ご意見箱の返信で使う列（無ければシートの右端に自動で作る） */
+var GOIKEN = {
+  spreadsheetId: '1z3wCamSk7Mjm4hFrP_4D5Q9WKmXOJtUmXuFs0GEdeQI',
+  sheetName: '目安箱',
+  doneStatus: '対応済',          // 返信したら「状態」をこれにする
+  publicMax: 30                  // 職員側に出す回答の最大件数（新しい順）
+};
+var GOIKEN_SCOPES = ['本人のみ', 'この園', '全園'];
+
 var CACHE_SECONDS = 60;   // 同じ結果を60秒使い回す（シートを毎回開かないように）
 var AUTH_VERSION = 1;     // 画面側が「2段階認証が有効なGASか」を見分ける目印
 
@@ -85,6 +103,13 @@ function doGet(e) {
   var res;
   if (p.action === 'verify') {
     res = verifyToken_(p.token);
+  } else if (p.action === 'goikenPublic') {
+    // 職員側（ANSHIN KUN）用：公開された回答だけを返す。通行証は不要（投稿者名・元の本文は返さない）
+    res = goikenPublic_(String(p.garden || ''));
+  } else if (p.action === 'goikenList') {
+    // 本部の返信画面用：全件（投稿者名を含む）。通行証が必要
+    var who0 = checkToken_(p.token);
+    res = who0 ? goikenList_() : { ok: false, error: 'auth', authVersion: AUTH_VERSION };
   } else {
     var who = checkToken_(p.token);
     res = who ? getCounts_() : { ok: false, error: 'auth', authVersion: AUTH_VERSION };
@@ -104,6 +129,10 @@ function doPost(e) {
     if (body.action === 'login')       res = login_(String(body.id || ''), String(body.password || ''));
     else if (body.action === 'code')   res = verifyCode_(String(body.pending || ''), String(body.code || ''));
     else if (body.action === 'logout') res = logout_(String(body.token || ''));
+    else if (body.action === 'goikenReply') {
+      var who1 = checkToken_(String(body.token || ''));
+      res = who1 ? goikenReply_(body, who1.user) : { ok: false, error: 'auth' };
+    }
     else res = { ok: false, error: 'bad_request' };
   } catch (err) {
     console.error(err);
@@ -407,3 +436,166 @@ function testCounts() {
   CacheService.getScriptCache().remove('counts');
   Logger.log(JSON.stringify(getCounts_()));
 }
+
+
+/* ============================================================
+   ご意見箱の返信（2026-11-26）
+   ============================================================ */
+
+function goikenSheet_() {
+  var sh = SpreadsheetApp.openById(GOIKEN.spreadsheetId).getSheetByName(GOIKEN.sheetName);
+  if (!sh) throw new Error('シートが見つかりません：' + GOIKEN.sheetName);
+  return sh;
+}
+
+/* 見出し行から列番号（0始まり）を引く。make=true なら、無い列を右端に作る */
+function goikenCols_(sh, make) {
+  var lastCol = Math.max(sh.getLastColumn(), 1);
+  var head = sh.getRange(1, 1, 1, lastCol).getDisplayValues()[0].map(function (h) { return String(h).trim(); });
+  var need = ['受付日時', '追跡コード', 'カテゴリ', '本文', '園（参考）', '投稿者名', '状態', '本部からの返信', '返信更新日時', '投稿種別',
+              '返信範囲', '返信対象園', '公開用の質問文', '返信者'];
+  var cols = {};
+  need.forEach(function (name) {
+    var i = head.indexOf(name);
+    if (i < 0 && make && ['返信範囲', '返信対象園', '公開用の質問文', '返信者'].indexOf(name) >= 0) {
+      head.push(name);
+      i = head.length - 1;
+      sh.getRange(1, i + 1).setValue(name);
+    }
+    cols[name] = i;
+  });
+  return cols;
+}
+
+function cell_(row, i) { return i >= 0 && i < row.length ? String(row[i]).trim() : ''; }
+
+/* 本部の返信画面用：全件を新しい順で */
+function goikenList_() {
+  try {
+    var sh = goikenSheet_();
+    var cols = goikenCols_(sh, false);
+    var values = sh.getDataRange().getDisplayValues();
+    var items = [];
+    for (var r = 1; r < values.length; r++) {
+      var v = values[r];
+      if (cell_(v, cols['追跡コード']) === '' && cell_(v, 0) === '') continue;
+      items.push({
+        at: cell_(v, cols['受付日時']),
+        code: cell_(v, cols['追跡コード']),
+        category: cell_(v, cols['カテゴリ']),
+        body: cell_(v, cols['本文']),
+        garden: cell_(v, cols['園（参考）']),
+        name: cell_(v, cols['投稿者名']),
+        status: cell_(v, cols['状態']),
+        reply: cell_(v, cols['本部からの返信']),
+        repliedAt: cell_(v, cols['返信更新日時']),
+        mode: cell_(v, cols['投稿種別']),
+        scope: cell_(v, cols['返信範囲']),
+        targetGarden: cell_(v, cols['返信対象園']),
+        question: cell_(v, cols['公開用の質問文']),
+        replier: cell_(v, cols['返信者'])
+      });
+    }
+    items.reverse();
+    return { ok: true, items: items };
+  } catch (err) {
+    console.error(err);
+    return { ok: false, error: 'server', message: String(err && err.message || err) };
+  }
+}
+
+/* 返信を書き込む
+   body = { code, scope:'本人のみ'|'この園'|'全園', garden, question, reply } */
+function goikenReply_(body, user) {
+  var code = String(body.code || '').trim();
+  var scope = String(body.scope || '').trim();
+  var reply = String(body.reply || '').trim();
+  var garden = String(body.garden || '').trim();
+  var question = String(body.question || '').trim();
+  if (!code) return { ok: false, error: 'bad_request', message: '追跡コードがありません' };
+  if (GOIKEN_SCOPES.indexOf(scope) < 0) return { ok: false, error: 'bad_request', message: '返信の範囲を選んでください' };
+  if (!reply) return { ok: false, error: 'bad_request', message: '返信の本文を入力してください' };
+  if (scope === 'この園' && !garden) return { ok: false, error: 'bad_request', message: '返信する園を選んでください' };
+  if (reply.length > 4000 || question.length > 2000) return { ok: false, error: 'bad_request', message: '文章が長すぎます' };
+
+  try {
+    var sh = goikenSheet_();
+    var cols = goikenCols_(sh, true);
+    var values = sh.getDataRange().getDisplayValues();
+    var rowNo = -1;
+    for (var r = 1; r < values.length; r++) {
+      if (cell_(values[r], cols['追跡コード']) === code) { rowNo = r + 1; break; }
+    }
+    if (rowNo < 0) return { ok: false, error: 'not_found', message: 'この追跡コードの投稿が見つかりません：' + code };
+
+    var now = Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy/MM/dd HH:mm:ss');
+    function put(name, val) { if (cols[name] >= 0) sh.getRange(rowNo, cols[name] + 1).setValue(val); }
+    put('本部からの返信', reply);          // 記名の投稿者には、これまでどおり本人の端末に届く
+    put('返信更新日時', now);
+    put('状態', GOIKEN.doneStatus);
+    put('返信範囲', scope);
+    put('返信対象園', scope === 'この園' ? garden : '');
+    put('公開用の質問文', scope === '本人のみ' ? '' : question);
+    put('返信者', user ? user.name : '');
+
+    CacheService.getScriptCache().removeAll(['counts', 'goiken_public']);
+    return { ok: true, repliedAt: now };
+  } catch (err) {
+    console.error(err);
+    var msg = String(err && err.message || err);
+    if (/権限|permission|access/i.test(msg)) msg = 'スプレッドシートに書き込めません。cryk0289 に編集者権限があるか確認してください。';
+    return { ok: false, error: 'server', message: msg };
+  }
+}
+
+/* 職員側：その園あて＋全園あての回答を新しい順で返す（園名の空白の違いは無視） */
+function goikenPublic_(garden) {
+  var norm = function (t) { return String(t || '').replace(/[\s　]/g, ''); };
+  var all;
+  var cache = CacheService.getScriptCache();
+  var hit = cache.get('goiken_public');
+  if (hit) {
+    all = JSON.parse(hit);
+  } else {
+    try {
+      var sh = goikenSheet_();
+      var cols = goikenCols_(sh, false);
+      all = [];
+      if (cols['返信範囲'] >= 0) {
+        var values = sh.getDataRange().getDisplayValues();
+        for (var r = 1; r < values.length; r++) {
+          var v = values[r];
+          var scope = cell_(v, cols['返信範囲']);
+          var reply = cell_(v, cols['本部からの返信']);
+          if ((scope !== '全園' && scope !== 'この園') || !reply) continue;
+          all.push({
+            id: cell_(v, cols['追跡コード']),
+            scope: scope,
+            garden: cell_(v, cols['返信対象園']),
+            category: cell_(v, cols['カテゴリ']),
+            question: cell_(v, cols['公開用の質問文']),
+            reply: reply,
+            date: cell_(v, cols['返信更新日時'])
+          });
+        }
+      }
+      all.sort(function (a, b) { return a.date < b.date ? 1 : a.date > b.date ? -1 : 0; });
+      cache.put('goiken_public', JSON.stringify(all), CACHE_SECONDS);
+    } catch (err) {
+      console.error(err);
+      return { ok: false, error: 'server' };
+    }
+  }
+  var g = norm(garden);
+  var items = all.filter(function (x) { return x.scope === '全園' || (g && norm(x.garden) === g); })
+                 .slice(0, GOIKEN.publicMax)
+                 .map(function (x) {
+                   return { id: x.id, scope: x.scope, garden: x.scope === 'この園' ? x.garden : '',
+                            category: x.category, question: x.question, reply: x.reply, date: x.date };
+                 });
+  return { ok: true, items: items };
+}
+
+/* エディタから実行して動作確認する用 */
+function testGoikenList() { Logger.log(JSON.stringify(goikenList_()).slice(0, 3000)); }
+function testGoikenPublic() { CacheService.getScriptCache().remove('goiken_public'); Logger.log(JSON.stringify(goikenPublic_('しおどめ保育園つくば'))); }
