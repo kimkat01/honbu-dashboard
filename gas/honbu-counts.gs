@@ -1,5 +1,6 @@
 /* ============================================================
    本部ダッシュボード 件数API ＋ 2段階認証（2026-10）
+   ・2026-11-27：USE_2FA（2段階認証を使うか）を追加。いまは false（使わない）
    ・置き場所：cryk0289 の Apps Script プロジェクト「本部ダッシュボード 件数API」
      （このファイルの中身を、既存のコードと全部入れ替える）
    ・デプロイ：種類「ウェブアプリ」／次のユーザーとして実行：自分（cryk0289）／アクセス：全員
@@ -41,6 +42,11 @@
    ・シートの右端に「返信範囲」「返信対象園」「公開用の質問文」「返信者」の列を自動で作る
    ・※ cryk0289 に、ご意見箱スプレッドシートの【編集者】権限が必要（閲覧者のままだと書き込めない）
    ============================================================ */
+
+/* ---------- 2段階認証を使うか（2026-11-27 追加） ----------
+   false：2段階認証なし（いまの運用）。本部ダッシュボードを開けば、ご意見箱の返信画面もそのまま使える
+   true ：2段階認証あり。下の HONBU_USERS にメールアドレスを入れ、initPasswords を実行してから true にする */
+var USE_2FA = false;
 
 /* ---------- 本部の3人（ここだけ書き換える） ---------- */
 var HONBU_USERS = [
@@ -102,16 +108,16 @@ function doGet(e) {
   var p = (e && e.parameter) || {};
   var res;
   if (p.action === 'verify') {
-    res = verifyToken_(p.token);
+    res = USE_2FA ? verifyToken_(p.token) : { ok: true };   // 2段階認証なしのときは authVersion を返さない（画面はそのまま開く）
   } else if (p.action === 'goikenPublic') {
     // 職員側（ANSHIN KUN）用：公開された回答だけを返す。通行証は不要（投稿者名・元の本文は返さない）
     res = goikenPublic_(String(p.garden || ''));
   } else if (p.action === 'goikenList') {
     // 本部の返信画面用：全件（投稿者名を含む）。通行証が必要
-    var who0 = checkToken_(p.token);
+    var who0 = who_(p.token);
     res = who0 ? goikenList_() : { ok: false, error: 'auth', authVersion: AUTH_VERSION };
   } else {
-    var who = checkToken_(p.token);
+    var who = who_(p.token);
     res = who ? getCounts_() : { ok: false, error: 'auth', authVersion: AUTH_VERSION };
   }
   return output_(res, p.callback);
@@ -130,7 +136,7 @@ function doPost(e) {
     else if (body.action === 'code')   res = verifyCode_(String(body.pending || ''), String(body.code || ''));
     else if (body.action === 'logout') res = logout_(String(body.token || ''));
     else if (body.action === 'goikenReply') {
-      var who1 = checkToken_(String(body.token || ''));
+      var who1 = who_(String(body.token || ''));
       res = who1 ? goikenReply_(body, who1.user) : { ok: false, error: 'auth' };
     }
     else res = { ok: false, error: 'bad_request' };
@@ -258,6 +264,12 @@ function checkToken_(token) {
   if (t.exp < Date.now()) { props_().deleteProperty(key); return null; }
   var user = findUser_(t.id);
   return user ? { user: user, exp: t.exp } : null;
+}
+
+/* 通行証の確認（2段階認証なしのときは、誰でも「本部」として通す） */
+function who_(token) {
+  if (!USE_2FA) return { user: { id: 'honbu', name: '本部' }, exp: 0 };
+  return checkToken_(token);
 }
 
 function verifyToken_(token) {

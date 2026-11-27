@@ -154,8 +154,8 @@ textarea{min-height:120px;resize:vertical;line-height:1.7}
   }
 
   function load() {
+    // 2026-11-27：通行証が無くても、まずGASに聞く（2段階認証を使っていないときは、そのまま一覧が返る）
     var tk = token();
-    if (!tk) { showGate(); return; }
     $('app').hidden = false;
     $('list').innerHTML = '<div class="empty">読み込み中…</div>';
     fetch(API_URL + '?action=goikenList&token=' + encodeURIComponent(tk) + '&t=' + Date.now())
@@ -164,6 +164,7 @@ textarea{min-height:120px;resize:vertical;line-height:1.7}
         if (res && res.error === 'auth') { showGate(); return; }
         if (!res || !res.ok) throw new Error((res && res.message) || '取得に失敗しました');
         try { sessionStorage.removeItem('goiken_bounce'); } catch (e) {}
+        if (!res.items) throw new Error('GAS（本部ダッシュボード 件数API）が返信機能の入った新しい版になっていません。GASを更新して「新バージョン」でデプロイしてください。');
         items = res.items || [];
         renderList();
         if (cur) { var again = items.filter(function (x) { return x.code === cur.code; })[0]; if (again) select(again.code); }
