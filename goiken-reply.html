@@ -77,13 +77,6 @@ textarea{min-height:120px;resize:vertical;line-height:1.7}
   <a class="btn" href="https://docs.google.com/spreadsheets/d/1z3wCamSk7Mjm4hFrP_4D5Q9WKmXOJtUmXuFs0GEdeQI/edit" target="_blank" rel="noopener">📄 スプレッドシートを開く</a>
 </div>
 
-<div class="gate" id="gate" hidden>
-  <p><b>本部ダッシュボードにログインしてください</b></p>
-  <p style="font-size:14px;color:var(--sub)">このPCで本部ダッシュボードにログインしていないか、ログインの有効時間（12時間）が切れています。</p>
-  <a class="btn pri" href="./?next=goiken-reply.html">本部ダッシュボードにログインする</a>
-  <p style="font-size:13px;color:var(--sub)">ログインすると、自動でこの返信画面に戻ります。</p>
-</div>
-
 <div class="wrap" id="app" hidden>
   <section class="pane">
     <div class="pane-h">
@@ -124,7 +117,23 @@ textarea{min-height:120px;resize:vertical;line-height:1.7}
     } catch (e) {}
     return '';
   }
-  function showGate() { $('gate').hidden = false; $('app').hidden = true; }
+  /* 2026-11-27：「ログインしてください」の画面は出さない。
+     ・本部ダッシュボードのカードから開くと、通行証がURLの # に付いてくるので、それを使う
+       （別のブラウザ・アプリで開かれても、ログイン済みならそのまま入れる）
+     ・本当にログインしていないときだけ、本部ダッシュボードへ移り、ログイン後に自動でここへ戻る */
+  function showGate() {
+    try { localStorage.removeItem(TOKEN_KEY); } catch (e) {}
+    location.replace('./?next=goiken-reply.html');
+  }
+  (function takeHashToken() {
+    var m = /[#&]t=([^&]+)/.exec(location.hash || '');
+    if (!m) return;
+    var tk = decodeURIComponent(m[1]);
+    var expm = /[#&]exp=(\d+)/.exec(location.hash);
+    var exp = expm ? Number(expm[1]) : Date.now() + 12 * 60 * 60 * 1000;
+    try { localStorage.setItem(TOKEN_KEY, JSON.stringify({ token: tk, exp: exp })); } catch (e) {}
+    try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
+  })();
   function isDone(x) { return !!x.reply || x.status === '対応済'; }
   function gardenList() { return (typeof GARDEN_MASTER !== 'undefined') ? GARDEN_MASTER.map(function (g) { return g.name; }) : []; }
   function matchGarden(name) {
@@ -138,7 +147,7 @@ textarea{min-height:120px;resize:vertical;line-height:1.7}
   function load() {
     var tk = token();
     if (!tk) { showGate(); return; }
-    $('app').hidden = false; $('gate').hidden = true;
+    $('app').hidden = false;
     $('list').innerHTML = '<div class="empty">読み込み中…</div>';
     fetch(API_URL + '?action=goikenList&token=' + encodeURIComponent(tk) + '&t=' + Date.now())
       .then(function (r) { return r.json(); })
@@ -267,7 +276,7 @@ textarea{min-height:120px;resize:vertical;line-height:1.7}
       .then(function (r) { return r.json(); })
       .then(function (res) {
         btn.disabled = false;
-        if (res && res.error === 'auth') { showGate(); return; }
+        if (res && res.error === 'auth') { alert('ログインの有効時間が切れたため送信できませんでした。返信の文章を控えてから、本部ダッシュボードで入り直してください。'); return; }
         if (!res || !res.ok) { msg.className = 'msg err'; msg.textContent = (res && res.message) || '送信に失敗しました'; return; }
         msg.className = 'msg ok'; msg.textContent = '送信しました（' + res.repliedAt + '）';
         setTimeout(load, 600);

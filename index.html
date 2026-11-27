@@ -1133,7 +1133,13 @@
     window.addEventListener('focus', function () { if (expiredNow()) relockExpired(); });
     document.addEventListener('click', function (e) {
       var a = e.target.closest && e.target.closest('#main a');
-      if (a && expiredNow()) { e.preventDefault(); relockExpired(); }
+      if (a && expiredNow()) { e.preventDefault(); relockExpired(); return; }
+      // ご意見箱：通行証を # に付けて渡す（開いた先でログイン画面を出さないため）
+      if (a && /(^|\/)goiken-reply\.html/.test(a.getAttribute('href') || '')) {
+        var tk = getToken(), raw = null;
+        try { raw = JSON.parse(localStorage.getItem(TOKEN_KEY) || 'null'); } catch (e2) {}
+        a.setAttribute('href', 'goiken-reply.html' + (tk ? '#t=' + encodeURIComponent(tk) + (raw && typeof raw.exp === 'number' ? '&exp=' + raw.exp : '') : ''));
+      }
     }, true);
 
     var t = getToken();
