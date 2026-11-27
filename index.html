@@ -796,7 +796,7 @@
 
       <!-- ご意見箱（2026-11-26）：スプレッドシートではなく返信画面（goiken-reply.html）を開く。
            返信の範囲を「本人のみ／この園／全園」から選べる。スプレッドシートは返信画面の右上から開ける -->
-      <a class="card" data-count="goiken" data-pill="未対応あり" href="goiken-reply.html" target="_blank" rel="noopener">
+      <a class="card" data-count="goiken" data-pill="未対応あり" href="goiken.html" target="_blank" rel="noopener">
         <span class="pill muted">確認中</span>
         <div class="icon c-indigo">💬</div>
         <div class="title">ご意見箱</div>
@@ -1029,7 +1029,7 @@
       // 決裁承認などから「ログインしてから戻る」で来たときは、元の画面へ戻す（同じフォルダ内のページだけ）
       if (withAuth) {
         var next = new URLSearchParams(location.search).get('next') || '';
-        if (/^(kessai-shonin|hp-preview|saiyo-check|goiken-reply)\.html(\?[\w=&%.\-]*)?$/.test(next)) location.replace(next);
+        if (/^(kessai-shonin|hp-preview|saiyo-check|goiken|goiken-reply)\.html(\?[\w=&%.\-]*)?$/.test(next)) location.replace(next);
       }
     }
     function lock() {
@@ -1135,10 +1135,10 @@
       var a = e.target.closest && e.target.closest('#main a');
       if (a && expiredNow()) { e.preventDefault(); relockExpired(); return; }
       // ご意見箱：通行証を # に付けて渡す（開いた先でログイン画面を出さないため）
-      if (a && /(^|\/)goiken-reply\.html/.test(a.getAttribute('href') || '')) {
+      if (a && /(^|\/)goiken(-reply)?\.html/.test(a.getAttribute('href') || '')) {
         var tk = getToken(), raw = null;
         try { raw = JSON.parse(localStorage.getItem(TOKEN_KEY) || 'null'); } catch (e2) {}
-        a.setAttribute('href', 'goiken-reply.html' + (tk ? '#t=' + encodeURIComponent(tk) + (raw && typeof raw.exp === 'number' ? '&exp=' + raw.exp : '') : ''));
+        a.setAttribute('href', 'goiken.html' + (tk ? '#t=' + encodeURIComponent(tk) + (raw && typeof raw.exp === 'number' ? '&exp=' + raw.exp : '') : ''));
       }
     }, true);
 
