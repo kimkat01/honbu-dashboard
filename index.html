@@ -997,7 +997,10 @@
     function getToken() {
       try {
         var t = JSON.parse(localStorage.getItem(TOKEN_KEY) || 'null');
-        if (t && t.token && t.exp > Date.now()) return t.token;
+        if (t && t.token) {
+          var exp = typeof t.exp === 'number' ? t.exp : Date.parse(t.exp);
+          if (!exp || exp > Date.now()) return t.token;
+        }
       } catch (e) {}
       return '';
     }
@@ -1017,6 +1020,7 @@
       gate.style.display = 'none';
       main.classList.remove('hidden');
       logoutBtn.classList.toggle('hidden', !withAuth);
+      authOn = !!withAuth;
       // 職員ダッシュボードの「本部閲覧モード」用の目印（同じ kimkat01.github.io なので職員ダッシュボード側から読める。7日間有効）
       try { localStorage.setItem('sd_honbu_viewer', String(Date.now())); } catch (e) {}
       // 件数の取得などは後ろの<script>で待ち受けているので、ページを読み終えてから知らせる
@@ -1025,7 +1029,7 @@
       // 決裁承認などから「ログインしてから戻る」で来たときは、元の画面へ戻す（同じフォルダ内のページだけ）
       if (withAuth) {
         var next = new URLSearchParams(location.search).get('next') || '';
-        if (/^(kessai-shonin|hp-preview|saiyo-check)\.html(\?[\w=&%.\-]*)?$/.test(next)) location.replace(next);
+        if (/^(kessai-shonin|hp-preview|saiyo-check|goiken-reply)\.html(\?[\w=&%.\-]*)?$/.test(next)) location.replace(next);
       }
     }
     function lock() {
@@ -1116,6 +1120,22 @@
         history.replaceState(null, '', location.pathname);
       } catch (e) {}
     }
+    /* 2026-11-27：画面を開いたまま12時間を過ぎると、ダッシュボードは見えたままでも通行証は切れている。
+       そのままカード（ご意見箱など）を押すと別タブで「ログインしてください」になってしまうため、
+       画面に戻ったとき・カードを押したときに通行証を確かめ、切れていればログイン画面に戻す */
+    var authOn = false;
+    function expiredNow() { return unlocked && authOn && !getToken(); }
+    function relockExpired() {
+      clearToken(); lock();
+      err.textContent = 'ログインの有効時間（12時間）が切れました。もう一度ログインしてください。';
+    }
+    document.addEventListener('visibilitychange', function () { if (!document.hidden && expiredNow()) relockExpired(); });
+    window.addEventListener('focus', function () { if (expiredNow()) relockExpired(); });
+    document.addEventListener('click', function (e) {
+      var a = e.target.closest && e.target.closest('#main a');
+      if (a && expiredNow()) { e.preventDefault(); relockExpired(); }
+    }, true);
+
     var t = getToken();
     if (t) unlock(true);
     else step('gate-loading');   // 認証確認中は入力欄を見せず、スピナーを表示

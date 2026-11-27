@@ -80,7 +80,8 @@ textarea{min-height:120px;resize:vertical;line-height:1.7}
 <div class="gate" id="gate" hidden>
   <p><b>本部ダッシュボードにログインしてください</b></p>
   <p style="font-size:14px;color:var(--sub)">このPCで本部ダッシュボードにログインしていないか、ログインの有効時間（12時間）が切れています。</p>
-  <a class="btn pri" href="./">本部ダッシュボードを開く</a>
+  <a class="btn pri" href="./?next=goiken-reply.html">本部ダッシュボードにログインする</a>
+  <p style="font-size:13px;color:var(--sub)">ログインすると、自動でこの返信画面に戻ります。</p>
 </div>
 
 <div class="wrap" id="app" hidden>
@@ -113,7 +114,14 @@ textarea{min-height:120px;resize:vertical;line-height:1.7}
   function $(id) { return document.getElementById(id); }
   function esc(t) { return String(t == null ? '' : t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
   function token() {
-    try { var t = JSON.parse(localStorage.getItem(TOKEN_KEY) || 'null'); if (t && t.token && t.exp > Date.now()) return t.token; } catch (e) {}
+    // 2026-11-27：期限は数字でも日付の文字でも読めるようにする（採用計画承認と同じ）
+    try {
+      var t = JSON.parse(localStorage.getItem(TOKEN_KEY) || 'null');
+      if (t && t.token) {
+        var exp = typeof t.exp === 'number' ? t.exp : Date.parse(t.exp);
+        if (!exp || exp > Date.now()) return t.token;
+      }
+    } catch (e) {}
     return '';
   }
   function showGate() { $('gate').hidden = false; $('app').hidden = true; }
