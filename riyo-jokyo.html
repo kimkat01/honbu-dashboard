@@ -20,6 +20,9 @@
     本部アカウント（ログインマスタのG列が「本部」）のログインIDとパスワードでログインすると、
     GASが通行証を発行し、記録と名簿はその通行証があるときだけ受け取れる。
     通行証はこのパソコンのブラウザに30日間保存（「ログアウト」で消える）
+  ・2026-11-27：ログイン（IDとパスワード入力）を一旦外した
+    REQUIRE_LOGIN を false にすると、ログイン画面とログアウトボタンを出さずにそのまま記録を表示する。
+    戻すときは REQUIRE_LOGIN を true にする（GAS「アクセスログ」側の REQUIRE_LOGIN も true に戻すこと）
 -->
 <script>
   // 本部ダッシュボードと同じテーマ（ダーク／ライト）で開く
@@ -238,6 +241,7 @@ td.tot{font-weight:700}
 (function(){
   /* ===== 設定 ===== */
   var LOG_API_URL = 'https://script.google.com/macros/s/AKfycbxtFnYXdUs1XW5nIEoLmbJXo7HlGe7z4r-Uftuxv-tZq-CNF1vOk3JKzQXOUC7h-cAMSw/exec';   // ← GAS「アクセスログ」のウェブアプリ /exec のURL
+  var REQUIRE_LOGIN = false;   // 2026-11-27：一旦ログインなし（戻すときは true）
   var AUTH_KEY = 'riyo_auth_v1';   // 通行証（本部アカウントでログインしたときにGASが発行）の保存場所
   var FETCH_DAYS = 90;   // GASから受け取る最大日数（GAS側の上限も90日）
   /* 記録の開始日（2026-10-14）。これより前は数えない。
@@ -509,10 +513,12 @@ td.tot{font-weight:700}
 
   /* ===== 2026-10-27：本部アカウントのログイン ===== */
   function getAuth(){
+    if(!REQUIRE_LOGIN) return { token:'' };   // ログインなしのときは、いつもログイン済み扱い
     try{ var a = JSON.parse(localStorage.getItem(AUTH_KEY) || 'null'); if(a && a.token && a.exp > Date.now()) return a; }catch(e){}
     return null;
   }
   function clearAuth(){
+    if(!REQUIRE_LOGIN) return;
     try{ localStorage.removeItem(AUTH_KEY); localStorage.removeItem(CACHE_KEY); }catch(e){}
   }
   function api(body, signal){
@@ -542,6 +548,7 @@ td.tot{font-weight:700}
       $('gMsg').textContent = '通信できませんでした。少し待ってから、もう一度お試しください';
     });
   });
+  if(!REQUIRE_LOGIN) $('logout').hidden = true;   // ログインなしのときはログアウトボタンを出さない
   $('logout').addEventListener('click', function(){
     var a = getAuth();
     if(a) api({ action:'logout', token:a.token }).catch(function(){});
@@ -563,6 +570,7 @@ td.tot{font-weight:700}
     var timer = setTimeout(function(){ if(ctrl) ctrl.abort(); }, FETCH_TIMEOUT_MS);
     api({ action:'view', token:auth.token, days:FETCH_DAYS, fresh: fresh ? '1' : '' }, ctrl ? ctrl.signal : null)
       .then(function(d){
+        if(d && d.error === 'auth' && !REQUIRE_LOGIN){ throw new Error('GAS「アクセスログ」がまだログイン必須のままです。GASを新しいコードに貼り替えて、デプロイを「新バージョン」で更新してください'); }
         if(d && d.error === 'auth'){ clearAuth(); showGate('ログインの有効期限が切れました。もう一度ログインしてください'); var e = new Error('auth'); e.silent = true; throw e; }
         if(!d || !d.ok) throw new Error('記録を読み込めませんでした');
         saveCache(d);

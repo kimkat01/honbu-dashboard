@@ -28,11 +28,17 @@
      ・記録（action=log）の受け付けは今までどおり（園長・職員ダッシュボードは変更不要）
      ・doGet（合言葉で読む古い入口）は何も返さない
      ※ 貼り替えたら setup は不要。デプロイを「新バージョン」で更新するだけでよい
+   ・2026-11-27：ログイン（IDとパスワード入力）を一旦外した
+     REQUIRE_LOGIN を false にすると、通行証なしで記録と名簿を渡す。
+     ログインを戻すときは REQUIRE_LOGIN を true にして、デプロイを「新バージョン」で更新する
+     （riyo-jokyo.html 側の REQUIRE_LOGIN も true に戻すこと）
+     ※ 貼り替えたら setup は不要。デプロイを「新バージョン」で更新するだけでよい
    ============================================================ */
 
 var LOGIN_MASTER_ID = '1KYQJl14dvvWPM02xMzNye5hFFWiFU_uus-MVH3E-LNY'; // PINマスタ_テンプレート
 var LOGIN_SHEET     = 'ログインマスタ';
 var HONBU_ROLE      = '本部';      // ログインマスタG列がこの値の行だけ、利用状況画面に入れる
+var REQUIRE_LOGIN   = false;       // 2026-11-27：一旦ログインなし（戻すときは true）
 var TOKEN_DAYS      = 30;          // 通行証の有効日数
 var FAIL_LIMIT      = 5;           // パスワードをこの回数続けて間違えたら一時停止
 var FAIL_LOCK_SEC   = 900;         // 一時停止の時間（15分）
@@ -120,9 +126,9 @@ function doGet(e) {
   return json_({ ok: false, error: 'auth' });
 }
 
-/* ---------- 利用状況画面へ渡す（通行証が必要） ---------- */
+/* ---------- 利用状況画面へ渡す（REQUIRE_LOGIN が true のときは通行証が必要） ---------- */
 function viewOut_(d) {
-  if (!checkToken_(d.token)) return json_({ ok: false, error: 'auth' });
+  if (REQUIRE_LOGIN && !checkToken_(d.token)) return json_({ ok: false, error: 'auth' });
   var days = Math.min(MAX_VIEW_DAYS, Math.max(1, parseInt(d.days, 10) || 30));
   var fresh = String(d.fresh) === '1' || d.fresh === true;
   if (!fresh) {
