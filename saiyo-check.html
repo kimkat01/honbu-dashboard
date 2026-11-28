@@ -342,12 +342,12 @@
       <tr><th>指標</th><th>数字（${esc(u.month)}）</th><th>目安</th><th>数字での判定</th><th>園長の判定</th></tr>
       <tr><td class="l">定員充足度</td><td class="num">${n(u.capPct)}%（${n(u.enrolled)}／${n(u.capacity)}名${u.elastic?'・弾力'+u.elastic+'名':''}）</td><td>—</td><td>—</td><td>—</td></tr>
       <tr${ovL?' class="ov"':''}><td class="l">人件費率</td><td class="num">${n(u.labor)}%</td><td>${u.laborTarget}%以内</td><td>${u.labor==null?'—':ovL?'目安超え':'目安以内'}</td><td>${ans(u.ansLabor,'高い',ovL)}</td></tr>
-      <tr${ovN(u.staff)?' class="ov"':''}><td class="l">保育士の配置</td><td class="num">${n(u.staff)}名</td><td rowspan="2">国基準 ${n(base)}名<br>適正 ${n(up)}名まで</td><td>${jn(u.staff)}</td><td rowspan="2">${ans(u.ansStaff,'多い',ovN(u.staff)||ovN(u.fte))}</td></tr>
+      <tr${ovN(u.staff)?' class="ov"':''}><td class="l">保育士の配置</td><td class="num">${n(u.staff)}名</td><td rowspan="2">${u.baseFte!=null?`国基準 ${n(u.baseHead)}名<br>（常勤換算 ${u.baseFte}名）`:`国基準 ${n(base)}名`}<br>適正 ${n(up)}名まで</td><td>${jn(u.staff)}</td><td rowspan="2">${ans(u.ansStaff,'多い',ovN(u.staff)||ovN(u.fte))}</td></tr>
       <tr${ovN(u.fte)?' class="ov"':''}><td class="l">常勤換算</td><td class="num">${n(u.fte)}名</td><td>${jn(u.fte)}</td></tr>
     </table>
     <table style="margin-top:4px">${u.reason?`<tr><th>数字と違う判定の理由</th><td>${esc(u.reason)}</td></tr>`:''}
       <tr><th>園長の確認</th><td>${u.agreed?'☑ 自園の収支と職員の人数を確認したうえで、採用が必要と判断して申請':'—'}</td></tr></table>
-    <div class="expl">※月次収支レポート「② 運営の指標」の、申請した時点の数字です。適正範囲＝国の配置基準×1.8。人件費率の目安は70%。この常勤換算は月の勤務実績から出した数で、下の「2. 配置基準の確認」の常勤換算（職員マスタの所定労働時間から計算）とは出し方が違います。</div>`;
+    <div class="expl">※月次収支レポート「② 運営の指標」の、申請した時点の数字です。適正範囲の上限＝国基準の常勤換算（年齢ごとに在籍÷配置基準を小数で合計）×1.8。人件費率の目安は70%。この常勤換算は月の勤務実績から出した数で、下の「2. 配置基準の確認」の常勤換算（職員マスタの所定労働時間から計算）とは出し方が違います。</div>`;
   }
 
   /* ---- ①採用前申請 ---- */
