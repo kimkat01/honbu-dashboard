@@ -103,6 +103,12 @@
   table.grid th,table.grid td{padding:4px 6px}
   @media (max-width:600px){.two{grid-template-columns:1fr}}
   .memo td{height:46px}
+  /* 1. 自園の運営状況（2026-11-28）：採用前申請で園長が見た月次収支レポートの4つの指標と、園長の判定 */
+  table.unei th{width:auto;text-align:center}
+  table.unei td{text-align:center}
+  table.unei td.l{text-align:left}
+  table.unei tr.ov td{background:#fdf0dc;font-weight:700}
+  .mis{color:#b02a2a;font-weight:800}
   a.att{color:#2c4fb4;font-weight:700}
 
   /* ログインしていないとき */
@@ -320,6 +326,30 @@
   }
   const row=(k,v)=>has(v)?`<tr><th>${k}</th><td>${esc(v)}</td></tr>`:'';
 
+  /* ---- 1. 自園の運営状況（2026-11-28）----
+     採用前申請の「運営状況の確認」で、園長が見た月次収支レポート（② 運営の指標）の数字と、園長の判定。計算データの unei に入っている */
+  function uneiOf(r){ try{ const c=r['計算データ']?JSON.parse(r['計算データ']):null; return c&&c.unei||null; }catch(e){ return null; } }
+  function uneiSum(r){ const u=uneiOf(r); if(!u||!u.ok) return ''; return u.mismatch&&u.mismatch.length?'園長の判定が数字と違います':'園長の判定は数字どおり'; }
+  function uneiHtml(r){
+    const u=uneiOf(r);
+    if(!u) return `<div class="expl">この申請には運営状況の確認がありません（2026年11月28日より前の申請）。</div>`;
+    if(!u.ok) return `<div class="expl">月次収支レポートにこの園の数字がないため、確認は省略されています（${esc(u.note||'データ準備中')}）。</div>`;
+    const n=v=>v==null?'—':v, up=u.up, base=u.base;
+    const jn=v=>v==null?'—':v<base?'国基準を下回る':v<=up?'適正範囲内':`適正を${r1(v-up)}名超え`;
+    const ovN=v=>v!=null&&up!=null&&v>up, ovL=u.labor!=null&&u.labor>u.laborTarget;
+    const ans=(a,auto,over)=>!a?'—':(over&&a!==auto)?`<span class="mis">${esc(a)}</span><br><small>数字と違う</small>`:esc(a);
+    return `<table class="unei">
+      <tr><th>指標</th><th>数字（${esc(u.month)}）</th><th>目安</th><th>数字での判定</th><th>園長の判定</th></tr>
+      <tr><td class="l">定員充足度</td><td class="num">${n(u.capPct)}%（${n(u.enrolled)}／${n(u.capacity)}名${u.elastic?'・弾力'+u.elastic+'名':''}）</td><td>—</td><td>—</td><td>—</td></tr>
+      <tr${ovL?' class="ov"':''}><td class="l">人件費率</td><td class="num">${n(u.labor)}%</td><td>${u.laborTarget}%以内</td><td>${u.labor==null?'—':ovL?'目安超え':'目安以内'}</td><td>${ans(u.ansLabor,'高い',ovL)}</td></tr>
+      <tr${ovN(u.staff)?' class="ov"':''}><td class="l">保育士の配置</td><td class="num">${n(u.staff)}名</td><td rowspan="2">国基準 ${n(base)}名<br>適正 ${n(up)}名まで</td><td>${jn(u.staff)}</td><td rowspan="2">${ans(u.ansStaff,'多い',ovN(u.staff)||ovN(u.fte))}</td></tr>
+      <tr${ovN(u.fte)?' class="ov"':''}><td class="l">常勤換算</td><td class="num">${n(u.fte)}名</td><td>${jn(u.fte)}</td></tr>
+    </table>
+    <table style="margin-top:4px">${u.reason?`<tr><th>数字と違う判定の理由</th><td>${esc(u.reason)}</td></tr>`:''}
+      <tr><th>園長の確認</th><td>${u.agreed?'☑ 自園の収支と職員の人数を確認したうえで、採用が必要と判断して申請':'—'}</td></tr></table>
+    <div class="expl">※月次収支レポート「② 運営の指標」の、申請した時点の数字です。適正範囲＝国の配置基準×1.8。人件費率の目安は70%。この常勤換算は月の勤務実績から出した数で、下の「2. 配置基準の確認」の常勤換算（職員マスタの所定労働時間から計算）とは出し方が違います。</div>`;
+  }
+
   /* ---- ①採用前申請 ---- */
   function preDoc(r){
     const h=haichi(r), hf=hireFte(r);
@@ -362,11 +392,13 @@
         <div><div class="k">年間人件費（${esc(r['採用予定人数']||1)}人分）</div><div class="v">${annual?yen(annual):'—'}</div></div>
         <div><div class="k">人件費率${annual?'（現状→採用後）':''}</div><div class="v">${jk.sum}</div></div>
       </div>
-      <h3>1. 配置基準の確認<small id="haichi-sum">${esc(r['配置基準の確認']||'')}</small></h3>
+      <h3>1. 自園の運営状況<small>${esc(uneiSum(r))}</small></h3>
+      ${uneiHtml(r)}
+      <h3>2. 配置基準の確認<small id="haichi-sum">${esc(r['配置基準の確認']||'')}</small></h3>
       ${h_html}
-      <h3>2. 求人の条件</h3>
+      <h3>3. 求人の条件</h3>
       <table>${row('給与',r['給与'])}${row('勤務時間',r['勤務時間'])}${row('待遇',r['待遇'])}${row('応募条件',r['応募条件'])}</table>
-      <h3>3. 費用</h3>
+      <h3>4. 費用</h3>
       <table>
         ${row('想定年収（1人）',has(r['想定年収（1人）'])?yen(r['想定年収（1人）']):'')}
         ${row('年収の内訳',r['人件費シミュレーション内訳'])}
@@ -377,7 +409,7 @@
         ${annual?`<tr><th>初年度の合計（最大）</th><td><b>${yen(annual+fee)}</b>（年間人件費＋採用経費）</td></tr>`:''}
         ${jk.rows}
       </table>
-      <h3>4. 本部の判断</h3>
+      <h3>5. 本部の判断</h3>
       <table class="memo"><tr><th>判定</th><td>${esc(stText(r['ステータス']))}${has(r['本部確認者'])?'　確認者：'+esc(r['本部確認者']):''}${has(r['本部確認日時'])?'　'+esc(r['本部確認日時']):''}　　□ 可決　　□ 相談</td></tr>
         <tr><th>本部コメント</th><td>${esc(r['本部コメント']||'')}</td></tr></table>`;
   }
