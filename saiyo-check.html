@@ -315,7 +315,7 @@
     CUR=i; renderList();
     $('empty').classList.add('hidden'); $('page').classList.remove('hidden'); { const hp=HAICHI[String(i.r['施設コード']||'')]; const b=$('btn-haichi'); if(hp){ b.href=hp; b.hidden=false; } else b.hidden=true; }
     $('page').innerHTML=i.kind==='pre'?preDoc(i.r):kDoc(i.r);
-    if(i.kind==='pre'){ const h=haichi(i.r); PRE_CTX={need:h.need,hf:hireFte(i.r),fteApp:num(i.r['現在FTE']),skipped:h.skipped}; fillNowFte(i.r); }
+    if(i.kind==='pre'){ const h=haichi(i.r); PRE_CTX={need:h.need,hf:hireFte(i.r),fteApp:num(i.r['現在FTE']),skipped:h.skipped}; fillNowFte(i.r); loadUneiLive(String(i.r['施設コード']||'')); }
     window.scrollTo({top:0,behavior:'smooth'});
   }
 
@@ -332,22 +332,47 @@
   function uneiSum(r){ const u=uneiOf(r); if(!u||!u.ok) return ''; return u.mismatch&&u.mismatch.length?'園長の判定が数字と違います':'園長の判定は数字どおり'; }
   function uneiHtml(r){
     const u=uneiOf(r);
-    if(!u) return `<div class="expl">この申請には運営状況の確認がありません（2026年11月28日より前の申請）。</div>`;
+    // 2026-11-28より前の申請：園長の判定はないので、今日時点の月次収支レポートの数字を参考として出す（open() のあとで読み込む）
+    if(!u) return `<div id="unei-live"><div class="expl">月次収支レポートを読み込んでいます…</div></div>`;
     if(!u.ok) return `<div class="expl">月次収支レポートにこの園の数字がないため、確認は省略されています（${esc(u.note||'データ準備中')}）。</div>`;
+    return uneiTable(u,true)+`
+    <table style="margin-top:4px">${u.reason?`<tr><th>数字と違う判定の理由</th><td>${esc(u.reason)}</td></tr>`:''}
+      <tr><th>園長の確認</th><td>${u.agreed?'☑ 自園の収支と職員の人数を確認したうえで、採用が必要と判断して申請':'—'}</td></tr></table>
+    <div class="expl">※月次収支レポート「② 運営の指標」の、申請した時点の数字です。適正範囲の上限＝国基準の常勤換算（年齢ごとに在籍÷配置基準を小数で合計）×1.8。人件費率の目安は70%。この常勤換算は月の勤務実績から出した数で、下の「2. 配置基準の確認」の常勤換算（職員マスタの所定労働時間から計算）とは出し方が違います。</div>`;
+  }
+  function uneiTable(u,withAns){
     const n=v=>v==null?'—':v, up=u.up, base=u.base;
     const jn=v=>v==null?'—':v<base?'国基準を下回る':v<=up?'適正範囲内':`適正を${r1(v-up)}名超え`;
     const ovN=v=>v!=null&&up!=null&&v>up, ovL=u.labor!=null&&u.labor>u.laborTarget;
-    const ans=(a,auto,over)=>!a?'—':(over&&a!==auto)?`<span class="mis">${esc(a)}</span><br><small>数字と違う</small>`:esc(a);
+    const ans=(a,auto,over)=>!withAns?'<small>（申請時は<br>この項目なし）</small>':!a?'—':(over&&a!==auto)?`<span class="mis">${esc(a)}</span><br><small>数字と違う</small>`:esc(a);
     return `<table class="unei">
       <tr><th>指標</th><th>数字（${esc(u.month)}）</th><th>目安</th><th>数字での判定</th><th>園長の判定</th></tr>
       <tr><td class="l">定員充足度</td><td class="num">${n(u.capPct)}%（${n(u.enrolled)}／${n(u.capacity)}名${u.elastic?'・弾力'+u.elastic+'名':''}）</td><td>—</td><td>—</td><td>—</td></tr>
       <tr${ovL?' class="ov"':''}><td class="l">人件費率</td><td class="num">${n(u.labor)}%</td><td>${u.laborTarget}%以内</td><td>${u.labor==null?'—':ovL?'目安超え':'目安以内'}</td><td>${ans(u.ansLabor,'高い',ovL)}</td></tr>
       <tr${ovN(u.staff)?' class="ov"':''}><td class="l">保育士の配置</td><td class="num">${n(u.staff)}名</td><td rowspan="2">${u.baseFte!=null?`国基準 ${n(u.baseHead)}名<br>（常勤換算 ${u.baseFte}名）`:`国基準 ${n(base)}名`}<br>適正 ${n(up)}名まで</td><td>${jn(u.staff)}</td><td rowspan="2">${ans(u.ansStaff,'多い',ovN(u.staff)||ovN(u.fte))}</td></tr>
       <tr${ovN(u.fte)?' class="ov"':''}><td class="l">常勤換算</td><td class="num">${n(u.fte)}名</td><td>${jn(u.fte)}</td></tr>
-    </table>
-    <table style="margin-top:4px">${u.reason?`<tr><th>数字と違う判定の理由</th><td>${esc(u.reason)}</td></tr>`:''}
-      <tr><th>園長の確認</th><td>${u.agreed?'☑ 自園の収支と職員の人数を確認したうえで、採用が必要と判断して申請':'—'}</td></tr></table>
-    <div class="expl">※月次収支レポート「② 運営の指標」の、申請した時点の数字です。適正範囲の上限＝国基準の常勤換算（年齢ごとに在籍÷配置基準を小数で合計）×1.8。人件費率の目安は70%。この常勤換算は月の勤務実績から出した数で、下の「2. 配置基準の確認」の常勤換算（職員マスタの所定労働時間から計算）とは出し方が違います。</div>`;
+    </table>`;
+  }
+  /* 古い申請：今日時点の月次収支レポート（keiei-dashboard.html?kpi=1）の数字を読み込んで、参考として表に出す */
+  let LIVE_FR=null;
+  window.addEventListener('message',ev=>{
+    if(ev.origin!==location.origin||!ev.data||ev.data.type!=='keiei-kpi') return;
+    const box=$('unei-live'); if(!box||!LIVE_FR||ev.source!==LIVE_FR.contentWindow) return;
+    if(box.dataset.done) return; box.dataset.done='1';
+    const u=ev.data;
+    box.innerHTML=u.ok?uneiTable(u,false)+`<div class="expl">※この申請は運営状況の確認を入れる前（2026年11月28日より前）に出されたため、園長の判定はありません。上は<b>今日時点</b>の月次収支レポート「② 運営の指標」の数字（参考）です。適正範囲の上限＝国基準の常勤換算×1.8。人件費率の目安は70%。</div>`
+      :`<div class="expl">この申請は運営状況の確認を入れる前（2026年11月28日より前）の申請です。月次収支レポートにこの園の数字がまだないため、参考の数字も出せません。</div>`;
+    const sm=document.querySelector('#unei-sum'); if(sm) sm.textContent=u.ok?'参考：今日時点の数字（園長の判定なし）':'';
+  });
+  function loadUneiLive(code){
+    const box=$('unei-live'); if(!box) return;
+    box.dataset.code=code;
+    if(LIVE_FR) LIVE_FR.remove();
+    LIVE_FR=document.createElement('iframe'); LIVE_FR.setAttribute('aria-hidden','true'); LIVE_FR.tabIndex=-1;
+    LIVE_FR.style.cssText='position:absolute;width:800px;height:10px;left:-9999px;top:0;border:0';
+    LIVE_FR.src='https://kimkat01.github.io/shiodome-knowledge/keiei-dashboard.html?kpi=1&garden='+encodeURIComponent(code);
+    document.body.appendChild(LIVE_FR);
+    setTimeout(()=>{ const b=$('unei-live'); if(b&&!b.dataset.done){ b.dataset.done='1'; b.innerHTML='<div class="expl">月次収支レポートを読み込めませんでした。開き直してください。</div>'; } },12000);
   }
 
   /* ---- ①採用前申請 ---- */
@@ -392,7 +417,7 @@
         <div><div class="k">年間人件費（${esc(r['採用予定人数']||1)}人分）</div><div class="v">${annual?yen(annual):'—'}</div></div>
         <div><div class="k">人件費率${annual?'（現状→採用後）':''}</div><div class="v">${jk.sum}</div></div>
       </div>
-      <h3>1. 自園の運営状況<small>${esc(uneiSum(r))}</small></h3>
+      <h3>1. 自園の運営状況<small id="unei-sum">${esc(uneiSum(r))}</small></h3>
       ${uneiHtml(r)}
       <h3>2. 配置基準の確認<small id="haichi-sum">${esc(r['配置基準の確認']||'')}</small></h3>
       ${h_html}
